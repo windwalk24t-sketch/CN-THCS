@@ -1,0 +1,6 @@
+{
+  "name": "Công Nghệ THCS - GV Nguyễn Đức Tài",
+  "description": "Cổng học tập môn Công nghệ 6, 7, 8, 9 bộ sách Kết nối tri thức với cuộc sống. Giáo viên Nguyễn Đức Tài - Giao diện Robot CyberTech & Phòng thí nghiệm mô phỏng.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
