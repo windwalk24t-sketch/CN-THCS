@@ -4,7 +4,7 @@ import { grade7Data } from './grade7';
 import { grade8Data } from './grade8';
 import { grade9Data } from './grade9';
 
-const STORAGE_KEY = 'cong_nghe_thcs_curriculum_v1';
+const STORAGE_KEY = 'cong_nghe_thcs_curriculum_v2';
 
 export const defaultCurricula: Record<GradeLevel, GradeCurriculum> = {
   6: grade6Data,

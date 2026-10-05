@@ -220,7 +220,7 @@ export const LessonDetailModal: React.FC<LessonDetailModalProps> = ({
                       className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800/80 leading-relaxed text-slate-300 text-xs sm:text-sm flex gap-3 items-start"
                     >
                       <span className="font-mono text-cyan-400 font-bold shrink-0">0{index + 1}.</span>
-                      <p>{point}</p>
+                      <p className="whitespace-pre-line">{point}</p>
                     </div>
                   ))}
                 </div>
