@@ -14,6 +14,7 @@ import { CyberFooter } from './components/CyberFooter';
 import { CyberAudioDeck } from './components/CyberAudioDeck';
 import { LessonDetailModal } from './components/LessonDetailModal';
 import { TeacherEditorModal } from './components/TeacherEditorModal';
+import { Grade9ExamView } from './components/Grade9ExamView';
 import { SmartHomeSimulator } from './components/simulators/SmartHomeSimulator';
 import { IrrigationSimulator } from './components/simulators/IrrigationSimulator';
 import { CircuitSimulator } from './components/simulators/CircuitSimulator';
@@ -29,6 +30,7 @@ import {
   Sparkles,
   Bot,
   Compass,
+  Award,
 } from 'lucide-react';
 import { playCyberBeep, playLaserChirp, toggleSound, isSoundEnabled } from './utils/audio';
 
@@ -37,7 +39,7 @@ export default function App() {
     loadAllCurriculum()
   );
   const [selectedGrade, setSelectedGrade] = useState<GradeLevel>(6);
-  const [activeView, setActiveView] = useState<'curriculum' | 'lab'>('curriculum');
+  const [activeView, setActiveView] = useState<'curriculum' | 'lab' | 'exam'>('curriculum');
   const [searchQuery, setSearchQuery] = useState('');
   const [soundActive, setSoundActive] = useState(isSoundEnabled());
 
@@ -222,6 +224,42 @@ export default function App() {
                 <span>{currentGradeData.chapters.length} Chương học phần</span>
               </div>
             </div>
+
+            {/* Special Banner for Grade 9 Exam */}
+            {selectedGrade === 9 && (
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-950/60 via-purple-950/60 to-slate-950 border border-amber-500/50 shadow-[0_0_25px_rgba(245,158,11,0.2)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-amber-950 border border-amber-500 text-amber-300">
+                    <Award className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-cyber font-bold text-[10px] px-2 py-0.5 rounded bg-amber-900/60 text-amber-200 border border-amber-700">
+                        HỆ THỐNG MỚI
+                      </span>
+                      <h3 className="font-cyber font-bold text-sm sm:text-base text-slate-100">
+                        PHẦN ÔN THI &amp; KIỂM TRA ĐÁNH GIÁ CÔNG NGHỆ 9
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-1">
+                      Bao gồm 27 câu trắc nghiệm (tự động chấm điểm) và 4 câu tự luận trọng tâm. Học sinh làm bài trực tiếp &amp; nộp bài cho Thầy Tài.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => {
+                      playCyberBeep(900, 'triangle', 0.05);
+                      setActiveView('exam');
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 hover:brightness-110 text-slate-950 font-cyber font-bold text-xs tracking-wider shadow-[0_0_15px_rgba(245,158,11,0.4)] transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap"
+                  >
+                    <Award className="w-4 h-4" />
+                    VÀO LÀM BÀI ÔN THI NGAY
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Search Results Hint */}
             {searchQuery && (
@@ -415,6 +453,11 @@ export default function App() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* VIEW 3: GRADE 9 EXAM CENTER */}
+        {activeView === 'exam' && (
+          <Grade9ExamView onBackToCurriculum={() => setActiveView('curriculum')} />
         )}
       </main>
 

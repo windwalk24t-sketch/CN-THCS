@@ -1,13 +1,13 @@
 import React from 'react';
 import { GradeLevel } from '../types/curriculum';
-import { Volume2, VolumeX, Terminal } from 'lucide-react';
+import { Volume2, VolumeX, Terminal, Award } from 'lucide-react';
 import { playCyberBeep } from '../utils/audio';
 
 interface CyberHeaderProps {
   currentGrade: GradeLevel;
   onSelectGrade: (grade: GradeLevel) => void;
-  activeView: 'curriculum' | 'lab';
-  setActiveView: (view: 'curriculum' | 'lab') => void;
+  activeView: 'curriculum' | 'lab' | 'exam';
+  setActiveView: (view: 'curriculum' | 'lab' | 'exam') => void;
   soundEnabled: boolean;
   onToggleSound: () => void;
 }
@@ -45,7 +45,7 @@ export const CyberHeader: React.FC<CyberHeaderProps> = ({
           </a>
         </div>
 
-        {/* Navigation Tabs (Công nghệ 6, 7, 8, 9, Robot Lab) on the SAME single line */}
+        {/* Navigation Tabs on the SAME single line */}
         <nav className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           {grades.map((g) => {
             const isSelected = activeView === 'curriculum' && currentGrade === g.level;
@@ -82,9 +82,25 @@ export const CyberHeader: React.FC<CyberHeaderProps> = ({
             <Terminal className="w-3.5 h-3.5" />
             <span>Robot Lab</span>
           </button>
+
+          {/* ÔN THI CÔNG NGHỆ 9 */}
+          <button
+            onClick={() => {
+              playCyberBeep(920, 'triangle', 0.05);
+              setActiveView('exam');
+            }}
+            className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-cyber tracking-wider transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+              activeView === 'exam'
+                ? 'bg-amber-950/90 text-amber-300 border border-amber-500/60 shadow-[0_0_12px_rgba(245,158,11,0.3)] font-semibold'
+                : 'text-amber-400 hover:text-amber-300 hover:bg-slate-900/60'
+            }`}
+          >
+            <Award className="w-3.5 h-3.5 text-amber-400" />
+            <span>Ôn Thi CN 9</span>
+          </button>
         </nav>
 
-        {/* Sound Toggle Button Only (Thầy Tài // Biên Soạn removed as requested) */}
+        {/* Sound Toggle Button */}
         <div className="flex items-center shrink-0">
           <button
             onClick={onToggleSound}
