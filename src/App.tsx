@@ -14,7 +14,8 @@ import { CyberFooter } from './components/CyberFooter';
 import { CyberAudioDeck } from './components/CyberAudioDeck';
 import { LessonDetailModal } from './components/LessonDetailModal';
 import { TeacherEditorModal } from './components/TeacherEditorModal';
-import { Grade9ExamView } from './components/Grade9ExamView';
+import { THCSExamView } from './components/THCSExamView';
+import { QRCodeModal, TARGET_WEB_URL } from './components/QRCodeModal';
 import { SmartHomeSimulator } from './components/simulators/SmartHomeSimulator';
 import { IrrigationSimulator } from './components/simulators/IrrigationSimulator';
 import { CircuitSimulator } from './components/simulators/CircuitSimulator';
@@ -47,6 +48,7 @@ export default function App() {
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [lessonToEdit, setLessonToEdit] = useState<Lesson | null>(null);
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
 
   const handleToggleSound = () => {
     const next = toggleSound();
@@ -151,6 +153,7 @@ export default function App() {
         setActiveView={setActiveView}
         soundEnabled={soundActive}
         onToggleSound={handleToggleSound}
+        onOpenQRModal={() => setIsQRModalOpen(true)}
       />
 
       {/* Hero Banner with Avatar & Live Code Stream */}
@@ -159,6 +162,7 @@ export default function App() {
         setSearchQuery={setSearchQuery}
         totalLessonsCount={totalLessonsCount}
         onOpenLab={() => setActiveView('lab')}
+        onOpenQRModal={() => setIsQRModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -225,41 +229,39 @@ export default function App() {
               </div>
             </div>
 
-            {/* Special Banner for Grade 9 Exam */}
-            {selectedGrade === 9 && (
-              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-950/60 via-purple-950/60 to-slate-950 border border-amber-500/50 shadow-[0_0_25px_rgba(245,158,11,0.2)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-amber-950 border border-amber-500 text-amber-300">
-                    <Award className="w-6 h-6 animate-pulse" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-cyber font-bold text-[10px] px-2 py-0.5 rounded bg-amber-900/60 text-amber-200 border border-amber-700">
-                        HỆ THỐNG MỚI
-                      </span>
-                      <h3 className="font-cyber font-bold text-sm sm:text-base text-slate-100">
-                        PHẦN ÔN THI &amp; KIỂM TRA ĐÁNH GIÁ CÔNG NGHỆ 9
-                      </h3>
-                    </div>
-                    <p className="text-xs text-slate-300 mt-1">
-                      Bao gồm 27 câu trắc nghiệm (tự động chấm điểm) và 4 câu tự luận trọng tâm. Học sinh làm bài trực tiếp &amp; nộp bài cho Thầy Tài.
-                    </p>
-                  </div>
+            {/* Special Banner for Grade Exam (6, 7, 8, 9) */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-950/60 via-purple-950/60 to-slate-950 border border-amber-500/50 shadow-[0_0_25px_rgba(245,158,11,0.2)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-amber-950 border border-amber-500 text-amber-300">
+                  <Award className="w-6 h-6 animate-pulse" />
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => {
-                      playCyberBeep(900, 'triangle', 0.05);
-                      setActiveView('exam');
-                    }}
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 hover:brightness-110 text-slate-950 font-cyber font-bold text-xs tracking-wider shadow-[0_0_15px_rgba(245,158,11,0.4)] transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap"
-                  >
-                    <Award className="w-4 h-4" />
-                    VÀO LÀM BÀI ÔN THI NGAY
-                  </button>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-cyber font-bold text-[10px] px-2 py-0.5 rounded bg-amber-900/60 text-amber-200 border border-amber-700">
+                      HỆ THỐNG ÔN THI THCS
+                    </span>
+                    <h3 className="font-cyber font-bold text-sm sm:text-base text-slate-100">
+                      PHẦN ÔN THI &amp; KIỂM TRA ĐÁNH GIÁ CÔNG NGHỆ {selectedGrade}
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1">
+                    Bao gồm câu hỏi trắc nghiệm tự động chấm điểm và câu hỏi tự luận trọng tâm. Học sinh làm bài trực tiếp &amp; nộp bài cho Thầy Tài.
+                  </p>
                 </div>
               </div>
-            )}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    playCyberBeep(900, 'triangle', 0.05);
+                    setActiveView('exam');
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 hover:brightness-110 text-slate-950 font-cyber font-bold text-xs tracking-wider shadow-[0_0_15px_rgba(245,158,11,0.4)] transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap"
+                >
+                  <Award className="w-4 h-4" />
+                  VÀO ÔN THI LỚP {selectedGrade}
+                </button>
+              </div>
+            </div>
 
             {/* Search Results Hint */}
             {searchQuery && (
@@ -455,9 +457,9 @@ export default function App() {
           </div>
         )}
 
-        {/* VIEW 3: GRADE 9 EXAM CENTER */}
+        {/* VIEW 3: UNIFIED THCS EXAM CENTER (6, 7, 8, 9) */}
         {activeView === 'exam' && (
-          <Grade9ExamView onBackToCurriculum={() => setActiveView('curriculum')} />
+          <THCSExamView initialGrade={selectedGrade} onBackToCurriculum={() => setActiveView('curriculum')} />
         )}
       </main>
 
@@ -486,7 +488,14 @@ export default function App() {
       />
 
       {/* Cyber Footer */}
-      <CyberFooter />
+      <CyberFooter onOpenQRModal={() => setIsQRModalOpen(true)} />
+
+      {/* Website QR Code Modal */}
+      <QRCodeModal
+        isOpen={isQRModalOpen}
+        onClose={() => setIsQRModalOpen(false)}
+        url={TARGET_WEB_URL}
+      />
     </div>
   );
 }

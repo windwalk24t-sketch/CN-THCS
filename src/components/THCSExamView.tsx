@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { GradeLevel } from '../types/curriculum';
 import {
-  MULTIPLE_CHOICE_QUESTIONS,
-  ESSAY_QUESTIONS,
+  ALL_GRADE_EXAMS,
   StudentSubmission,
   TEACHER_EXAM_PASS,
   EXAM_STORAGE_KEY,
-} from '../data/examGrade9';
+} from '../data/examData';
 import {
   FileText,
   CheckCircle2,
-  AlertCircle,
   Clock,
   Send,
   Lock,
@@ -22,35 +21,37 @@ import {
   Search,
   BookOpen,
   Filter,
-  Check,
   X,
   HelpCircle,
   Sparkles,
 } from 'lucide-react';
 import { playLaserChirp, playSuccessChirp, playCyberBeep } from '../utils/audio';
 
-interface Grade9ExamViewProps {
+interface THCSExamViewProps {
+  initialGrade?: GradeLevel;
   onBackToCurriculum?: () => void;
 }
 
-export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurriculum }) => {
+export const THCSExamView: React.FC<THCSExamViewProps> = ({
+  initialGrade = 8,
+  onBackToCurriculum,
+}) => {
   // Mode: student exam vs teacher dashboard
   const [activeTab, setActiveTab] = useState<'student' | 'teacher'>('student');
 
+  // Selected Grade for the exam
+  const [selectedGrade, setSelectedGrade] = useState<GradeLevel>(initialGrade);
+  const currentExam = ALL_GRADE_EXAMS[selectedGrade];
+
   // Student Form State
   const [studentName, setStudentName] = useState('');
-  const [studentClass, setStudentClass] = useState('9A1');
+  const [studentClass, setStudentClass] = useState(`${selectedGrade}A1`);
   const [examStarted, setExamStarted] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   // Student Answers
   const [mcAnswers, setMcAnswers] = useState<Record<number, 'A' | 'B' | 'C' | 'D'>>({});
-  const [essayAnswers, setEssayAnswers] = useState<Record<number, string>>({
-    1: '',
-    2: '',
-    3: '',
-    4: '',
-  });
+  const [essayAnswers, setEssayAnswers] = useState<Record<number, string>>({});
 
   // Submitted result state for student
   const [submittedResult, setSubmittedResult] = useState<StudentSubmission | null>(null);
@@ -63,17 +64,20 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
   const [selectedSubmission, setSelectedSubmission] = useState<StudentSubmission | null>(null);
 
   // Teacher grading modal state
-  const [gradingEssayScores, setGradingEssayScores] = useState<Record<number, number>>({
-    1: 2.5,
-    2: 2.5,
-    3: 2.5,
-    4: 2.5,
-  });
+  const [gradingEssayScores, setGradingEssayScores] = useState<Record<number, number>>({});
   const [gradingFeedback, setGradingFeedback] = useState('');
 
   // Teacher Filter
+  const [filterGrade, setFilterGrade] = useState<'ALL' | GradeLevel>('ALL');
   const [filterClass, setFilterClass] = useState('ALL');
   const [searchStudent, setSearchStudent] = useState('');
+
+  // Update default student class when grade changes
+  useEffect(() => {
+    if (!examStarted) {
+      setStudentClass(`${selectedGrade}A1`);
+    }
+  }, [selectedGrade, examStarted]);
 
   // Load submissions from localStorage
   const loadSubmissions = () => {
@@ -113,6 +117,22 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
     return `${mins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  // Student switch grade before starting
+  const handleSelectGradeTab = (grade: GradeLevel) => {
+    if (examStarted) {
+      if (!window.confirm('Em đang trong bài thi. Đổi khối lớp sẽ làm mới bài làm của em?')) {
+        return;
+      }
+    }
+    playCyberBeep(600 + grade * 50, 'sine', 0.04);
+    setSelectedGrade(grade);
+    setExamStarted(false);
+    setSubmittedResult(null);
+    setMcAnswers({});
+    setEssayAnswers({});
+    setElapsedSeconds(0);
+  };
+
   // Student start exam
   const handleStartExam = (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,16 +144,20 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
     setExamStarted(true);
     setElapsedSeconds(0);
     setMcAnswers({});
-    setEssayAnswers({ 1: '', 2: '', 3: '', 4: '' });
+    const initEssay: Record<number, string> = {};
+    currentExam.essay.forEach((q) => {
+      initEssay[q.id] = '';
+    });
+    setEssayAnswers(initEssay);
     setSubmittedResult(null);
   };
 
   // Student Submit Exam
   const handleSubmitExam = () => {
     const answeredCount = Object.keys(mcAnswers).length;
-    const totalMC = MULTIPLE_CHOICE_QUESTIONS.length;
+    const totalMC = currentExam.multipleChoice.length;
 
-    let confirmMsg = `Thí sinh ${studentName} - Lớp ${studentClass} có chắc chắn muốn nộp bài?`;
+    let confirmMsg = `Thí sinh ${studentName} - Lớp ${studentClass} (Khối ${selectedGrade}) có chắc chắn muốn nộp bài?`;
     if (answeredCount < totalMC) {
       confirmMsg += `\nLưu ý: Bạn mới hoàn thành ${answeredCount}/${totalMC} câu trắc nghiệm!`;
     }
@@ -144,7 +168,7 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
 
     // Calculate MC Score
     let correct = 0;
-    MULTIPLE_CHOICE_QUESTIONS.forEach((q) => {
+    currentExam.multipleChoice.forEach((q) => {
       if (mcAnswers[q.id] === q.correctAnswer) {
         correct++;
       }
@@ -155,6 +179,7 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
 
     const newSubmission: StudentSubmission = {
       id: `sub_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      grade: selectedGrade,
       studentName: studentName.trim(),
       studentClass,
       submittedAt: new Date().toLocaleString('vi-VN'),
@@ -203,7 +228,9 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
 
     let totalEssay = 0;
     Object.values(gradingEssayScores).forEach((s) => (totalEssay += s));
-    const finalScore = Number(((selectedSubmission.mcScoreOn10 * 0.7) + (totalEssay * 0.3)).toFixed(2));
+    const finalScore = Number(
+      (selectedSubmission.mcScoreOn10 * 0.7 + totalEssay * 0.3).toFixed(2)
+    );
 
     const updatedList = submissions.map((sub) => {
       if (sub.id === selectedSubmission.id) {
@@ -243,11 +270,13 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
     }
 
     let csvContent = 'data:text/csv;charset=utf-8,\uFEFF';
-    csvContent += 'STT,Họ và tên,Lớp,Thời gian nộp,Số câu trắc nghiệm đúng,Điểm TN (hệ 10),Trạng thái,Nhận xét của GV\n';
+    csvContent +=
+      'STT,Khối lớp,Họ và tên,Lớp,Thời gian nộp,Số câu trắc nghiệm đúng,Điểm TN (hệ 10),Trạng thái,Nhận xét của GV\n';
 
     submissions.forEach((sub, idx) => {
       const row = [
         idx + 1,
+        `"Lớp ${sub.grade}"`,
         `"${sub.studentName}"`,
         `"${sub.studentClass}"`,
         `"${sub.submittedAt}"`,
@@ -262,39 +291,43 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Bang_diem_Cong_nghe_9_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute(
+      'download',
+      `Bang_diem_Cong_nghe_THCS_${new Date().toISOString().slice(0, 10)}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Filtered submissions
+  // Filtered submissions for teacher
   const filteredSubmissions = submissions.filter((sub) => {
+    const matchGrade = filterGrade === 'ALL' || sub.grade === filterGrade;
     const matchClass = filterClass === 'ALL' || sub.studentClass === filterClass;
     const matchName = sub.studentName.toLowerCase().includes(searchStudent.toLowerCase());
-    return matchClass && matchName;
+    return matchGrade && matchClass && matchName;
   });
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 py-6 sm:py-8 px-3 sm:px-6 font-sans">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Top Header & Navigation */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-slate-950 via-purple-950/40 to-slate-950 border border-purple-500/40 shadow-[0_0_25px_rgba(168,85,247,0.2)]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-slate-950 via-cyan-950/40 to-slate-950 border border-cyan-500/40 shadow-[0_0_25px_rgba(6,182,212,0.2)]">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-purple-900/40 border border-purple-500/50 text-purple-300">
+            <div className="p-2.5 rounded-xl bg-cyan-950 border border-cyan-500/50 text-cyan-300">
               <Award className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded text-[10px] font-cyber font-semibold bg-purple-950 text-purple-300 border border-purple-800">
-                  CÔNG NGHỆ 9
+                <span className="px-2 py-0.5 rounded text-[10px] font-cyber font-semibold bg-cyan-950 text-cyan-300 border border-cyan-800">
+                  CÔNG NGHỆ THCS
                 </span>
                 <h1 className="font-cyber font-bold text-lg sm:text-xl text-slate-100 tracking-wide">
-                  HỆ THỐNG ÔN THI &amp; KIỂM TRA ĐÁNH GIÁ
+                  HỆ THỐNG ÔN THI &amp; KIỂM TRA ĐÁNH GIÁ (LỚP 6 · 7 · 8 · 9)
                 </h1>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Chủ đề Định hướng nghề nghiệp &amp; Thị trường lao động (Trắc nghiệm 27 câu + Tự luận 4 câu)
+                Ngân hàng đề ôn tập chuẩn sách Kết Nối Tri Thức · Tự động chấm điểm trắc nghiệm &amp; nộp bài cho Thầy Tài
               </p>
             </div>
           </div>
@@ -343,6 +376,38 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
           </div>
         </div>
 
+        {/* Grade Selector Tabs for Exam (6, 7, 8, 9) */}
+        {activeTab === 'student' && !examStarted && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-2xl bg-slate-900/80 border border-slate-800">
+            <div className="flex items-center gap-2 text-xs font-cyber text-slate-300">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>CHỌN KHỐI LỚP ÔN THI:</span>
+            </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              {([6, 7, 8, 9] as GradeLevel[]).map((g) => {
+                const isCurrent = selectedGrade === g;
+                return (
+                  <button
+                    key={g}
+                    onClick={() => handleSelectGradeTab(g)}
+                    className={`px-4 py-2 rounded-xl text-xs font-cyber font-bold tracking-wider transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                      isCurrent
+                        ? 'bg-cyan-950 text-cyan-300 border border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+                        : 'bg-slate-950/70 text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-slate-800'
+                    }`}
+                  >
+                    <span>LỚP {g}</span>
+                    <span className="text-[10px] opacity-75 font-mono">
+                      ({ALL_GRADE_EXAMS[g].multipleChoice.length} TN + {ALL_GRADE_EXAMS[g].essay.length} TL)
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* ========================================================== */}
         {/* TAB 1: STUDENT VIEW                                       */}
         {/* ========================================================== */}
@@ -356,10 +421,13 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                     <BookOpen className="w-8 h-8" />
                   </div>
                   <h2 className="font-cyber font-bold text-xl text-slate-100">
-                    ĐĂNG KÝ BẮT ĐẦU LÀM BÀI ÔN THI
+                    ĐĂNG KÝ BẮT ĐẦU ÔN THI {currentExam.title.toUpperCase()}
                   </h2>
+                  <p className="text-xs text-cyan-300 font-mono">
+                    {currentExam.subTitle}
+                  </p>
                   <p className="text-xs text-slate-400">
-                    Cấu trúc đề: 27 câu trắc nghiệm 4 lựa chọn + 4 câu tự luận trọng tâm
+                    Cấu trúc đề: {currentExam.multipleChoice.length} câu trắc nghiệm khách quan + {currentExam.essay.length} câu tự luận trọng tâm
                   </p>
                 </div>
 
@@ -378,23 +446,41 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-cyber text-slate-300 mb-1.5">
-                      LỚP HỌC <span className="text-rose-400">*</span>
-                    </label>
-                    <select
-                      value={studentClass}
-                      onChange={(e) => setStudentClass(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 focus:border-cyan-400 text-slate-100 text-sm outline-none transition-colors"
-                    >
-                      <option value="9A1">Lớp 9A1</option>
-                      <option value="9A2">Lớp 9A2</option>
-                      <option value="9A3">Lớp 9A3</option>
-                      <option value="9A4">Lớp 9A4</option>
-                      <option value="9A5">Lớp 9A5</option>
-                      <option value="9A6">Lớp 9A6</option>
-                      <option value="Khác">Lớp khác</option>
-                    </select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-cyber text-slate-300 mb-1.5">
+                        KHỐI LỚP THI
+                      </label>
+                      <select
+                        value={selectedGrade}
+                        onChange={(e) => setSelectedGrade(parseInt(e.target.value) as GradeLevel)}
+                        className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 focus:border-cyan-400 text-slate-100 text-sm outline-none transition-colors"
+                      >
+                        <option value={6}>Công nghệ 6</option>
+                        <option value={7}>Công nghệ 7</option>
+                        <option value={8}>Công nghệ 8</option>
+                        <option value={9}>Công nghệ 9</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-cyber text-slate-300 mb-1.5">
+                        LỚP HỌC <span className="text-rose-400">*</span>
+                      </label>
+                      <select
+                        value={studentClass}
+                        onChange={(e) => setStudentClass(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 focus:border-cyan-400 text-slate-100 text-sm outline-none transition-colors"
+                      >
+                        <option value={`${selectedGrade}A1`}>Lớp {selectedGrade}A1</option>
+                        <option value={`${selectedGrade}A2`}>Lớp {selectedGrade}A2</option>
+                        <option value={`${selectedGrade}A3`}>Lớp {selectedGrade}A3</option>
+                        <option value={`${selectedGrade}A4`}>Lớp {selectedGrade}A4</option>
+                        <option value={`${selectedGrade}A5`}>Lớp {selectedGrade}A5</option>
+                        <option value={`${selectedGrade}A6`}>Lớp {selectedGrade}A6</option>
+                        <option value="Khác">Lớp khác</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-400 space-y-1.5 leading-relaxed">
@@ -402,7 +488,7 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                       <Sparkles className="w-3.5 h-3.5" /> Hướng dẫn làm bài:
                     </div>
                     <p>• Trắc nghiệm: Bấm chọn đáp án đúng nhất (A, B, C hoặc D).</p>
-                    <p>• Tự luận: Trình bày câu trả lời ngắn gọn, rõ ý vào từng khung bên dưới.</p>
+                    <p>• Tự luận: Trình bày câu trả lời ngắn gọn, rõ ý vào từng khung.</p>
                     <p>• Sau khi nộp, hệ thống sẽ tự chấm điểm trắc nghiệm và gửi bài về cho Thầy Tài.</p>
                   </div>
 
@@ -411,7 +497,7 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                     className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 hover:brightness-110 text-slate-950 font-cyber font-bold text-sm tracking-wider shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
                     <Sparkles className="w-4 h-4" />
-                    BẮT ĐẦU LÀM BÀI THI NGAY
+                    BẮT ĐẦU LÀM BÀI THI LỚP {selectedGrade}
                   </button>
                 </form>
               </div>
@@ -424,7 +510,7 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                 <div className="sticky top-16 z-30 p-3 sm:p-4 rounded-2xl bg-slate-950/95 backdrop-blur-md border border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.25)] flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <span className="font-cyber font-bold text-sm text-cyan-300">
-                      Học sinh: {studentName} ({studentClass})
+                      Lớp {selectedGrade} · Thí sinh: {studentName} ({studentClass})
                     </span>
                     <span className="hidden sm:inline text-slate-600">|</span>
                     <div className="flex items-center gap-1.5 text-xs font-mono text-amber-300">
@@ -437,7 +523,7 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                     <div className="text-xs font-mono text-slate-300">
                       Đã làm:{' '}
                       <span className="text-cyan-400 font-bold">
-                        {Object.keys(mcAnswers).length}/{MULTIPLE_CHOICE_QUESTIONS.length}
+                        {Object.keys(mcAnswers).length}/{currentExam.multipleChoice.length}
                       </span>{' '}
                       câu TN
                     </div>
@@ -455,10 +541,10 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                 {/* Quick Navigation Numbers */}
                 <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
                   <div className="text-xs font-cyber text-slate-400 mb-2">
-                    DANH SÁCH CÂU TRẮC NGHIỆM (Bấm số để chuyển nhanh):
+                    DANH SÁCH CÂU TRẮC NGHIỆM ({currentExam.multipleChoice.length} CÂU) - BẤM SỐ ĐỂ CHUYỂN NHANH:
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {MULTIPLE_CHOICE_QUESTIONS.map((q) => {
+                    {currentExam.multipleChoice.map((q) => {
                       const isAnswered = !!mcAnswers[q.id];
                       return (
                         <a
@@ -482,13 +568,13 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                   <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-800/50 flex items-center justify-between">
                     <h3 className="font-cyber font-bold text-sm text-cyan-300 flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-cyan-400" />
-                      PHẦN I: TRẮC NGHIỆM KHÁCH QUAN (27 CÂU)
+                      PHẦN I: TRẮC NGHIỆM KHÁCH QUAN ({currentExam.multipleChoice.length} CÂU)
                     </h3>
                     <span className="text-xs font-mono text-cyan-400">Chọn 1 đáp án đúng</span>
                   </div>
 
                   <div className="space-y-4">
-                    {MULTIPLE_CHOICE_QUESTIONS.map((q) => {
+                    {currentExam.multipleChoice.map((q) => {
                       const selected = mcAnswers[q.id];
                       return (
                         <div
@@ -554,13 +640,13 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                   <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-800/50 flex items-center justify-between">
                     <h3 className="font-cyber font-bold text-sm text-purple-300 flex items-center gap-2">
                       <FileText className="w-4 h-4 text-purple-400" />
-                      PHẦN II: TỰ LUẬN TRỌNG TÂM (4 CÂU)
+                      PHẦN II: TỰ LUẬN TRỌNG TÂM ({currentExam.essay.length} CÂU)
                     </h3>
                     <span className="text-xs font-mono text-purple-400">Trình bày câu trả lời của em</span>
                   </div>
 
                   <div className="space-y-4">
-                    {ESSAY_QUESTIONS.map((q) => (
+                    {currentExam.essay.map((q) => (
                       <div
                         key={q.id}
                         className="p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-purple-900/40 space-y-2.5"
@@ -617,7 +703,7 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                   </div>
                   <div>
                     <h2 className="font-cyber font-bold text-2xl text-slate-100">
-                      BÀI THI ĐÃ NỘP THÀNH CÔNG!
+                      BÀI THI LỚP {submittedResult.grade} ĐÃ NỘP THÀNH CÔNG!
                     </h2>
                     <p className="text-xs text-slate-400 mt-1">
                       Thí sinh: <strong className="text-cyan-300">{submittedResult.studentName}</strong> | Lớp:{' '}
@@ -656,7 +742,7 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                       setExamStarted(false);
                       setSubmittedResult(null);
                       setMcAnswers({});
-                      setEssayAnswers({ 1: '', 2: '', 3: '', 4: '' });
+                      setEssayAnswers({});
                     }}
                     className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-cyber border border-slate-700 transition-colors cursor-pointer inline-flex items-center gap-2"
                   >
@@ -675,7 +761,7 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                   </div>
 
                   <div className="space-y-3">
-                    {MULTIPLE_CHOICE_QUESTIONS.map((q) => {
+                    {currentExam.multipleChoice.map((q) => {
                       const userChoice = submittedResult.multipleChoiceAnswers[q.id];
                       const isCorrect = userChoice === q.correctAnswer;
                       return (
@@ -754,7 +840,7 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                   </div>
 
                   <div className="space-y-4">
-                    {ESSAY_QUESTIONS.map((q) => (
+                    {currentExam.essay.map((q) => (
                       <div
                         key={q.id}
                         className="p-5 rounded-2xl bg-slate-900/80 border border-purple-900/50 space-y-3"
@@ -809,7 +895,7 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                     BÀN LÀM VIỆC GIÁO VIÊN // THẦY TÀI
                   </h2>
                   <p className="text-xs text-slate-400 mt-1">
-                    Vui lòng nhập mật khẩu quản trị để xem danh sách bài nộp và chấm điểm
+                    Vui lòng nhập mật khẩu quản trị để xem danh sách bài nộp và chấm điểm các khối 6, 7, 8, 9
                   </p>
                 </div>
 
@@ -839,18 +925,46 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
             ) : (
               // Teacher Workspace
               <div className="space-y-6">
-                {/* Stats & Action Toolbar */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-                    <div className="text-[11px] font-cyber text-slate-400">TỔNG SỐ BÀI ĐÃ NỘP</div>
-                    <div className="text-2xl font-cyber font-bold text-cyan-300 mt-1">
+                {/* Stats & Action Toolbar for All 4 Grades */}
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5">
+                  <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
+                    <div className="text-[10px] font-cyber text-slate-400">TỔNG BÀI NỘP</div>
+                    <div className="text-xl font-cyber font-bold text-cyan-300 mt-1">
                       {submissions.length} bài
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-                    <div className="text-[11px] font-cyber text-slate-400">ĐIỂM TRẮC NGHIỆM TB</div>
-                    <div className="text-2xl font-cyber font-bold text-emerald-400 mt-1">
+                  <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
+                    <div className="text-[10px] font-cyber text-slate-400">KHỐI 6 NỘP</div>
+                    <div className="text-xl font-cyber font-bold text-blue-400 mt-1">
+                      {submissions.filter((s) => s.grade === 6).length} bài
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
+                    <div className="text-[10px] font-cyber text-slate-400">KHỐI 7 NỘP</div>
+                    <div className="text-xl font-cyber font-bold text-emerald-400 mt-1">
+                      {submissions.filter((s) => s.grade === 7).length} bài
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
+                    <div className="text-[10px] font-cyber text-slate-400">KHỐI 8 NỘP</div>
+                    <div className="text-xl font-cyber font-bold text-amber-400 mt-1">
+                      {submissions.filter((s) => s.grade === 8).length} bài
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
+                    <div className="text-[10px] font-cyber text-slate-400">KHỐI 9 NỘP</div>
+                    <div className="text-xl font-cyber font-bold text-purple-400 mt-1">
+                      {submissions.filter((s) => s.grade === 9).length} bài
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 col-span-2 sm:col-span-1">
+                    <div className="text-[10px] font-cyber text-slate-400">ĐIỂM TN TB</div>
+                    <div className="text-xl font-cyber font-bold text-teal-400 mt-1">
                       {submissions.length > 0
                         ? (
                             submissions.reduce((acc, cur) => acc + cur.mcScoreOn10, 0) /
@@ -860,19 +974,33 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                       /10
                     </div>
                   </div>
-
-                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-                    <div className="text-[11px] font-cyber text-slate-400">TRẠNG THÁI HỆ THỐNG</div>
-                    <div className="text-sm font-cyber font-bold text-purple-300 mt-2 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                      ĐANG NHẬN BÀI THI
-                    </div>
-                  </div>
                 </div>
 
                 {/* Search & Export Toolbar */}
                 <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2.5">
+                    {/* Filter Grade */}
+                    <div className="flex items-center gap-1.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-700 text-xs">
+                      <span className="text-slate-400 font-cyber">Khối:</span>
+                      <select
+                        value={filterGrade}
+                        onChange={(e) =>
+                          setFilterGrade(
+                            e.target.value === 'ALL'
+                              ? 'ALL'
+                              : (parseInt(e.target.value) as GradeLevel)
+                          )
+                        }
+                        className="bg-transparent text-slate-200 outline-none cursor-pointer"
+                      >
+                        <option value="ALL">Tất cả các khối</option>
+                        <option value={6}>Khối 6</option>
+                        <option value={7}>Khối 7</option>
+                        <option value={8}>Khối 8</option>
+                        <option value={9}>Khối 9</option>
+                      </select>
+                    </div>
+
                     {/* Filter Class */}
                     <div className="flex items-center gap-1.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-700 text-xs">
                       <Filter className="w-3.5 h-3.5 text-slate-400" />
@@ -882,12 +1010,15 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                         className="bg-transparent text-slate-200 outline-none cursor-pointer"
                       >
                         <option value="ALL">Tất cả các lớp</option>
+                        <option value="8A1">Lớp 8A1</option>
+                        <option value="8A2">Lớp 8A2</option>
+                        <option value="8A3">Lớp 8A3</option>
+                        <option value="8A4">Lớp 8A4</option>
                         <option value="9A1">Lớp 9A1</option>
                         <option value="9A2">Lớp 9A2</option>
                         <option value="9A3">Lớp 9A3</option>
-                        <option value="9A4">Lớp 9A4</option>
-                        <option value="9A5">Lớp 9A5</option>
-                        <option value="9A6">Lớp 9A6</option>
+                        <option value="6A1">Lớp 6A1</option>
+                        <option value="7A1">Lớp 7A1</option>
                       </select>
                     </div>
 
@@ -931,6 +1062,7 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                     <table className="w-full text-left text-xs sm:text-sm">
                       <thead className="bg-slate-950 text-slate-400 font-cyber text-[11px] border-b border-slate-800">
                         <tr>
+                          <th className="p-3.5">KHỐI</th>
                           <th className="p-3.5">HỌ VÀ TÊN</th>
                           <th className="p-3.5">LỚP</th>
                           <th className="p-3.5">THỜI GIAN NỘP</th>
@@ -943,13 +1075,16 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                       <tbody className="divide-y divide-slate-800/60 font-sans">
                         {filteredSubmissions.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="p-8 text-center text-slate-500">
+                            <td colSpan={8} className="p-8 text-center text-slate-500">
                               Chưa có học sinh nào nộp bài (hoặc không khớp bộ lọc).
                             </td>
                           </tr>
                         ) : (
                           filteredSubmissions.map((sub) => (
                             <tr key={sub.id} className="hover:bg-slate-800/40 transition-colors">
+                              <td className="p-3.5 font-cyber text-amber-400 font-bold">
+                                Lớp {sub.grade}
+                              </td>
                               <td className="p-3.5 font-semibold text-slate-100">
                                 {sub.studentName}
                               </td>
@@ -982,6 +1117,16 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                                     setSelectedSubmission(sub);
                                     if (sub.teacherEssayScores) {
                                       setGradingEssayScores(sub.teacherEssayScores);
+                                    } else {
+                                      const defaultScores: Record<number, number> = {};
+                                      const subExam = ALL_GRADE_EXAMS[sub.grade];
+                                      const perQuestion = subExam?.essay?.length
+                                        ? 10 / subExam.essay.length
+                                        : 2.5;
+                                      subExam?.essay?.forEach((q) => {
+                                        defaultScores[q.id] = parseFloat(perQuestion.toFixed(1));
+                                      });
+                                      setGradingEssayScores(defaultScores);
                                     }
                                     setGradingFeedback(sub.teacherFeedback || '');
                                   }}
@@ -1015,6 +1160,9 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                       <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
                         <div>
                           <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 font-cyber text-xs border border-amber-800">
+                              KHỐI {selectedSubmission.grade}
+                            </span>
                             <h3 className="font-cyber font-bold text-base text-slate-100">
                               BÀI THI: {selectedSubmission.studentName}
                             </h3>
@@ -1041,7 +1189,7 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                         <div className="p-4 rounded-xl bg-cyan-950/40 border border-cyan-800/60 flex items-center justify-between">
                           <div>
                             <div className="font-cyber font-bold text-cyan-300">
-                              KẾT QUẢ PHẦN TRẮC NGHIỆM (27 CÂU)
+                              KẾT QUẢ PHẦN TRẮC NGHIỆM ({selectedSubmission.totalMC} CÂU)
                             </div>
                             <div className="text-xs text-slate-400 mt-0.5">
                               Đúng {selectedSubmission.correctCount}/{selectedSubmission.totalMC} câu
@@ -1056,10 +1204,10 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                         <div className="space-y-4">
                           <div className="font-cyber font-bold text-purple-300 flex items-center gap-2 text-sm">
                             <FileText className="w-4 h-4 text-purple-400" />
-                            CHẤM BÀI TỰ LUẬN CỦA HỌC SINH
+                            CHẤM BÀI TỰ LUẬN CỦA HỌC SINH (LỚP {selectedSubmission.grade})
                           </div>
 
-                          {ESSAY_QUESTIONS.map((q) => (
+                          {(ALL_GRADE_EXAMS[selectedSubmission.grade]?.essay || []).map((q) => (
                             <div
                               key={q.id}
                               className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2.5"
@@ -1077,12 +1225,12 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
 
                               <div className="flex items-center gap-3 pt-1">
                                 <span className="text-xs font-cyber text-purple-300">
-                                  Điểm câu {q.id} (Thang 2.5đ):
+                                  Điểm câu {q.id}:
                                 </span>
                                 <input
                                   type="number"
                                   min="0"
-                                  max="2.5"
+                                  max="5"
                                   step="0.25"
                                   value={gradingEssayScores[q.id] ?? 2.5}
                                   onChange={(e) =>
@@ -1093,7 +1241,7 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                                   }
                                   className="w-20 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-purple-200 text-center font-mono outline-none focus:border-purple-400"
                                 />
-                                <span className="text-xs text-slate-400 font-mono">/ 2.5 điểm</span>
+                                <span className="text-xs text-slate-400 font-mono">điểm</span>
                               </div>
                             </div>
                           ))}
@@ -1108,7 +1256,7 @@ export const Grade9ExamView: React.FC<Grade9ExamViewProps> = ({ onBackToCurricul
                             rows={3}
                             value={gradingFeedback}
                             onChange={(e) => setGradingFeedback(e.target.value)}
-                            placeholder="Ví dụ: Nắm vững kiến thức bài 3, trình bày tự luận rõ ràng mạch lạc..."
+                            placeholder="Ví dụ: Nắm vững kiến thức bài học, trình bày tự luận rõ ràng mạch lạc..."
                             className="w-full p-3 rounded-xl bg-slate-950 border border-slate-700 focus:border-purple-400 text-slate-200 outline-none text-xs"
                           />
                         </div>

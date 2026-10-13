@@ -3,12 +3,14 @@ import { Search, Bot, Terminal, Cpu, Sparkles, BookOpen, Layers, Radio } from 'l
 import robotHeroImg from '../assets/images/cyber_robot_hero_1791029757334.jpg';
 import robotAvatarImg from '../assets/images/robot_avatar_mentor_1791029771859.jpg';
 import { playCyberBeep } from '../utils/audio';
+import { CyberQRCard } from './CyberQRCard';
 
 interface CyberHeroProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   totalLessonsCount: number;
   onOpenLab?: () => void;
+  onOpenQRModal?: () => void;
 }
 
 const TERMINAL_LOGS = [
@@ -25,6 +27,7 @@ export const CyberHero: React.FC<CyberHeroProps> = ({
   setSearchQuery,
   totalLessonsCount,
   onOpenLab,
+  onOpenQRModal,
 }) => {
   const [logIndex, setLogIndex] = useState(0);
 
@@ -128,13 +131,13 @@ export const CyberHero: React.FC<CyberHeroProps> = ({
             </div>
           </div>
 
-          {/* Right Column: Hero Graphic Asset */}
-          <div className="lg:col-span-5 relative">
+          {/* Right Column: Hero Graphic Asset & Scannable QR Code */}
+          <div className="lg:col-span-5 space-y-3">
             <div className="relative rounded-2xl overflow-hidden border border-cyan-500/40 shadow-[0_0_35px_rgba(6,182,212,0.25)] group">
               <img
                 src={robotHeroImg}
                 alt="Robot Teacher Nguyễn Đức Tài - CyberTech Laboratory"
-                className="w-full h-64 sm:h-80 object-cover object-center group-hover:scale-105 transition-transform duration-700"
+                className="w-full h-56 sm:h-72 object-cover object-center group-hover:scale-105 transition-transform duration-700"
                 referrerPolicy="no-referrer"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
@@ -150,6 +153,9 @@ export const CyberHero: React.FC<CyberHeroProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Embedded Scannable QR Code Card */}
+            {onOpenQRModal && <CyberQRCard onOpenModal={onOpenQRModal} />}
           </div>
         </div>
       </div>
