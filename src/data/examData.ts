@@ -28,6 +28,7 @@ export interface StudentSubmission {
   id: string;
   grade: GradeLevel;
   studentName: string;
+  nickname?: string;
   studentClass: string;
   submittedAt: string;
   durationMinutes: number;

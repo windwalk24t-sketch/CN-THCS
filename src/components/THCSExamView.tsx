@@ -47,6 +47,7 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
 
   // Student Form State
   const [studentName, setStudentName] = useState('');
+  const [studentNickname, setStudentNickname] = useState('cute student');
   const [studentClass, setStudentClass] = useState(`${selectedGrade}A1`);
   const [examStarted, setExamStarted] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -159,7 +160,8 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
     const answeredCount = Object.keys(mcAnswers).length;
     const totalMC = currentExam.multipleChoice.length;
 
-    let confirmMsg = `Thí sinh ${studentName} - Lớp ${studentClass} (Khối ${selectedGrade}) có chắc chắn muốn nộp bài?`;
+    const nickLabel = studentNickname.trim() ? ` (${studentNickname.trim()})` : '';
+    let confirmMsg = `Thí sinh ${studentName}${nickLabel} - Lớp ${studentClass} (Khối ${selectedGrade}) có chắc chắn muốn nộp bài?`;
     if (answeredCount < totalMC) {
       confirmMsg += `\nLưu ý: Bạn mới hoàn thành ${answeredCount}/${totalMC} câu trắc nghiệm!`;
     }
@@ -183,6 +185,7 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
       id: `sub_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       grade: selectedGrade,
       studentName: studentName.trim(),
+      nickname: (studentNickname.trim() || 'cute student'),
       studentClass,
       submittedAt: new Date().toLocaleString('vi-VN'),
       durationMinutes: duration,
@@ -273,13 +276,14 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
 
     let csvContent = 'data:text/csv;charset=utf-8,\uFEFF';
     csvContent +=
-      'STT,Khối lớp,Họ và tên,Lớp,Thời gian nộp,Số câu trắc nghiệm đúng,Điểm TN (hệ 10),Trạng thái,Nhận xét của GV\n';
+      'STT,Khối lớp,Họ và tên,Biệt danh,Lớp,Thời gian nộp,Số câu trắc nghiệm đúng,Điểm TN (hệ 10),Trạng thái,Nhận xét của GV\n';
 
     submissions.forEach((sub, idx) => {
       const row = [
         idx + 1,
         `"Lớp ${sub.grade}"`,
         `"${sub.studentName}"`,
+        `"${sub.nickname || 'cute student'}"`,
         `"${sub.studentClass}"`,
         `"${sub.submittedAt}"`,
         `"${sub.correctCount}/${sub.totalMC}"`,
@@ -306,7 +310,11 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
   const filteredSubmissions = submissions.filter((sub) => {
     const matchGrade = filterGrade === 'ALL' || sub.grade === filterGrade;
     const matchClass = filterClass === 'ALL' || sub.studentClass === filterClass;
-    const matchName = sub.studentName.toLowerCase().includes(searchStudent.toLowerCase());
+    const q = searchStudent.toLowerCase().trim();
+    const matchName =
+      !q ||
+      sub.studentName.toLowerCase().includes(q) ||
+      (sub.nickname && sub.nickname.toLowerCase().includes(q));
     return matchGrade && matchClass && matchName;
   });
 
@@ -448,6 +456,36 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
                     />
                   </div>
 
+                  <div>
+                    <label className="block text-xs font-cyber text-slate-300 mb-1.5 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        BIỆT DANH (NICKNAME)
+                      </span>
+                      <span className="text-[11px] font-mono text-cyan-400">
+                        Mặc định: cute student
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="cute student"
+                        value={studentNickname}
+                        onChange={(e) => setStudentNickname(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 focus:border-cyan-400 text-slate-100 text-sm outline-none transition-colors"
+                      />
+                      {studentNickname !== 'cute student' && (
+                        <button
+                          type="button"
+                          onClick={() => setStudentNickname('cute student')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 rounded-lg text-[10px] font-cyber bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+                          title="Đặt lại biệt danh mặc định"
+                        >
+                          Mặc định
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-cyber text-slate-300 mb-1.5">
@@ -512,7 +550,11 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
                 <div className="sticky top-16 z-30 p-3 sm:p-4 rounded-2xl bg-slate-950/95 backdrop-blur-md border border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.25)] flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <span className="font-cyber font-bold text-sm text-cyan-300">
-                      Lớp {selectedGrade} · Thí sinh: {studentName} ({studentClass})
+                      Lớp {selectedGrade} · Thí sinh: {studentName}{' '}
+                      <span className="text-amber-300 font-normal font-mono text-xs">
+                        (@{studentNickname.trim() || 'cute student'})
+                      </span>{' '}
+                      ({studentClass})
                     </span>
                     <span className="hidden sm:inline text-slate-600">|</span>
                     <div className="flex items-center gap-1.5 text-xs font-mono text-amber-300">
@@ -708,8 +750,11 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
                       BÀI THI LỚP {submittedResult.grade} ĐÃ NỘP THÀNH CÔNG!
                     </h2>
                     <p className="text-xs text-slate-400 mt-1">
-                      Thí sinh: <strong className="text-cyan-300">{submittedResult.studentName}</strong> | Lớp:{' '}
-                      <strong className="text-cyan-300">{submittedResult.studentClass}</strong> | Thời gian làm bài:{' '}
+                      Thí sinh: <strong className="text-cyan-300">{submittedResult.studentName}</strong>{' '}
+                      <span className="text-amber-300 font-mono text-xs">
+                        (@{submittedResult.nickname || 'cute student'})
+                      </span>{' '}
+                      | Lớp: <strong className="text-cyan-300">{submittedResult.studentClass}</strong> | Thời gian làm bài:{' '}
                       <span className="font-mono text-amber-300">{submittedResult.durationMinutes} phút</span>
                     </p>
                   </div>
@@ -1088,7 +1133,11 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
                                 Lớp {sub.grade}
                               </td>
                               <td className="p-3.5 font-semibold text-slate-100">
-                                {sub.studentName}
+                                <div>{sub.studentName}</div>
+                                <div className="text-[11px] font-mono text-cyan-400 font-normal flex items-center gap-1 mt-0.5">
+                                  <span className="text-slate-500">🏷️</span>
+                                  <span>{sub.nickname || 'cute student'}</span>
+                                </div>
                               </td>
                               <td className="p-3.5 font-mono text-cyan-400">
                                 {sub.studentClass}
@@ -1168,6 +1217,9 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
                             <h3 className="font-cyber font-bold text-base text-slate-100">
                               BÀI THI: {selectedSubmission.studentName}
                             </h3>
+                            <span className="px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 font-mono text-xs border border-amber-800">
+                              @{selectedSubmission.nickname || 'cute student'}
+                            </span>
                             <span className="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 font-mono text-xs border border-cyan-800">
                               Lớp {selectedSubmission.studentClass}
                             </span>
