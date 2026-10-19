@@ -31,18 +31,24 @@ import { playLaserChirp, playSuccessChirp, playCyberBeep } from '../utils/audio'
 
 interface THCSExamViewProps {
   initialGrade?: GradeLevel;
+  selectedGrade?: GradeLevel;
+  onSelectGrade?: (grade: GradeLevel) => void;
   onBackToCurriculum?: () => void;
 }
 
 export const THCSExamView: React.FC<THCSExamViewProps> = ({
   initialGrade = 8,
+  selectedGrade: propSelectedGrade,
+  onSelectGrade,
   onBackToCurriculum,
 }) => {
   // Mode: student exam vs teacher dashboard
   const [activeTab, setActiveTab] = useState<'student' | 'teacher'>('student');
 
   // Selected Grade for the exam
-  const [selectedGrade, setSelectedGrade] = useState<GradeLevel>(initialGrade);
+  const [selectedGrade, setSelectedGrade] = useState<GradeLevel>(
+    propSelectedGrade ?? initialGrade
+  );
   const currentExam = ALL_GRADE_EXAMS[selectedGrade];
 
   // Student Form State
@@ -120,6 +126,19 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
     return `${mins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  // Sync with prop if provided
+  useEffect(() => {
+    if (propSelectedGrade !== undefined && propSelectedGrade !== selectedGrade) {
+      if (!examStarted) {
+        setSelectedGrade(propSelectedGrade);
+        setSubmittedResult(null);
+        setMcAnswers({});
+        setEssayAnswers({});
+        setElapsedSeconds(0);
+      }
+    }
+  }, [propSelectedGrade]);
+
   // Student switch grade before starting
   const handleSelectGradeTab = (grade: GradeLevel) => {
     if (examStarted) {
@@ -129,6 +148,7 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
     }
     playCyberBeep(600 + grade * 50, 'sine', 0.04);
     setSelectedGrade(grade);
+    onSelectGrade?.(grade);
     setExamStarted(false);
     setSubmittedResult(null);
     setMcAnswers({});
