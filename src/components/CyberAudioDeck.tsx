@@ -93,7 +93,7 @@ export const CyberAudioDeck: React.FC = () => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const text =
-        'Khởi động phòng thí nghiệm Robot Lab! Giáo viên Nguyễn Đức Tài. Hệ thống mô phỏng công nghệ đã sẵn sàng. Chào mừng các em học sinh!';
+        'Khởi động phòng thí nghiệm Robot Lab! TỔ STEM FSCBN. Hệ thống mô phỏng công nghệ đã sẵn sàng. Chào mừng các em học sinh!';
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'vi-VN';
       utterance.rate = 1.05;
@@ -217,7 +217,7 @@ export const CyberAudioDeck: React.FC = () => {
               }`}
             >
               <div className="font-cyber font-bold text-xs flex items-center gap-1.5">
-                <Bot className="w-3.5 h-3.5 text-cyan-400" /> Robot AI Thầy Tài
+                <Bot className="w-3.5 h-3.5 text-cyan-400" /> Robot STEM FSCBN
               </div>
               <div className="text-[10px] text-cyan-400 font-mono mt-0.5">
                 ● Lời chào Robot tự động

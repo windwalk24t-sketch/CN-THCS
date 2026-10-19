@@ -20,7 +20,7 @@ const EXAM_TERMINAL_LOGS = [
   'CÔNG NGHỆ 8: VẬT LIỆU CƠ KHÍ · BẢN VẼ KỸ THUẬT · HÌNH CHIẾU · KHỐI TRÒN XOAY · AN TOÀN ĐIỆN (15 TN + 4 TL)',
   'CÔNG NGHỆ 9: THIẾT BỊ ĐIỆN DÂN DỤNG · ĐỊNH HƯỚNG NGHỀ KỸ THUẬT STEM (15 TN + 3 TL)',
   'TỰ ĐỘNG CHẤM ĐIỂM TRẮC NGHIỆM · HỌC SINH NỘP BÀI TRỰC TIẾP VỀ BÀN GIÁO VIÊN',
-  'GIÁO VIÊN NGUYỄN ĐỨC TÀI: SẴN SÀNG ĐÁNH GIÁ, CHẤM TỰ LUẬN & XUẤT BẢNG ĐIỂM',
+  'TỔ STEM FSCBN: SẴN SÀNG ĐÁNH GIÁ, CHẤM TỰ LUẬN & XUẤT BẢNG ĐIỂM',
 ];
 
 export const CyberHero: React.FC<CyberHeroProps> = ({

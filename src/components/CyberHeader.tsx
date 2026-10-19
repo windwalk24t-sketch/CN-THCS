@@ -1,6 +1,6 @@
 import React from 'react';
 import { GradeLevel } from '../types/curriculum';
-import { Volume2, VolumeX, Award, QrCode } from 'lucide-react';
+import { Volume2, VolumeX, Award, QrCode, Bot } from 'lucide-react';
 import { playCyberBeep } from '../utils/audio';
 
 interface CyberHeaderProps {
@@ -9,6 +9,7 @@ interface CyberHeaderProps {
   soundEnabled: boolean;
   onToggleSound: () => void;
   onOpenQRModal: () => void;
+  onJumpToSTEMLab?: () => void;
 }
 
 export const CyberHeader: React.FC<CyberHeaderProps> = ({
@@ -17,6 +18,7 @@ export const CyberHeader: React.FC<CyberHeaderProps> = ({
   soundEnabled,
   onToggleSound,
   onOpenQRModal,
+  onJumpToSTEMLab,
 }) => {
   const grades: { level: GradeLevel; label: string }[] = [
     { level: 6, label: 'Khối 6' },
@@ -63,8 +65,20 @@ export const CyberHeader: React.FC<CyberHeaderProps> = ({
           })}
         </nav>
 
-        {/* Actions: QR Code + Sound Toggle */}
+        {/* Actions: Robot Lab + QR Code + Sound Toggle */}
         <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => {
+              playCyberBeep(650, 'sine', 0.04);
+              if (onJumpToSTEMLab) onJumpToSTEMLab();
+            }}
+            title="Mở phòng thí nghiệm Robot Lab & Trình mô phỏng phụ"
+            className="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-cyber tracking-wider transition-all flex items-center gap-1.5 cursor-pointer bg-purple-950/70 hover:bg-purple-900/90 text-purple-300 border border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.2)]"
+          >
+            <Bot className="w-3.5 h-3.5 text-purple-400" />
+            <span className="hidden md:inline">Robot Lab & Mô Phỏng</span>
+          </button>
+
           <button
             onClick={() => {
               playCyberBeep(750, 'sine', 0.04);
