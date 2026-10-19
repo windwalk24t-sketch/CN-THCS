@@ -13,7 +13,7 @@ export const CyberFooter: React.FC<CyberFooterProps> = ({ onOpenQRModal }) => {
         <div className="flex flex-wrap items-center gap-2">
           <Bot className="w-4 h-4 text-cyan-400" />
           <span className="font-cyber font-bold text-slate-200">
-            CÔNG NGHỆ THCS · GIÁO VIÊN NGUYỄN ĐỨC TÀI
+            CÔNG NGHỆ THCS · TỔ STEM FSCBN
           </span>
           <span className="text-slate-600">|</span>
           <span className="text-slate-400">Bộ sách Kết Nối Tri Thức Với Cuộc Sống</span>

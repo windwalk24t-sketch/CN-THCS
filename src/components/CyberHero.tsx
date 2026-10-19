@@ -81,7 +81,7 @@ export const CyberHero: React.FC<CyberHeroProps> = ({
                 className="w-5 h-5 rounded-full border border-cyan-400 object-cover"
                 referrerPolicy="no-referrer"
               />
-              <span>GIÁO VIÊN: NGUYỄN ĐỨC TÀI</span>
+              <span>TỔ STEM FSCBN</span>
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
             </div>
 
@@ -93,7 +93,7 @@ export const CyberHero: React.FC<CyberHeroProps> = ({
                 </span>
               </h1>
               <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
-                Bộ sách Kết Nối Tri Thức Với Cuộc Sống. Học sinh đăng ký họ tên, biệt danh để làm bài trực tuyến; hệ thống tự động chấm điểm trắc nghiệm khách quan và gửi toàn bộ bài làm về Bàn giáo viên của Thầy Nguyễn Đức Tài.
+                Bộ sách Kết Nối Tri Thức Với Cuộc Sống. Học sinh đăng ký họ tên, biệt danh để làm bài trực tuyến; hệ thống tự động chấm điểm trắc nghiệm khách quan và gửi toàn bộ bài làm về Bàn giáo viên TỔ STEM FSCBN.
               </p>
             </div>
 

@@ -28,11 +28,11 @@ export const CyberHeader: React.FC<CyberHeaderProps> = ({
   return (
     <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-cyan-900/40 transition-all">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 overflow-x-auto whitespace-nowrap">
-        {/* Brand / Teacher Title */}
+        {/* Brand / STEM Department Title */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <div className="font-cyber font-bold text-sm sm:text-base tracking-wider text-slate-100 flex items-center gap-2 whitespace-nowrap">
             <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0" />
-            <span>Giáo viên: Nguyễn Đức Tài</span>
+            <span>TỔ STEM FSCBN</span>
             <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-cyber font-semibold bg-amber-950/80 text-amber-300 border border-amber-500/60 shadow-[0_0_8px_rgba(245,158,11,0.3)]">
               HỆ THỐNG ÔN THI THCS
             </span>

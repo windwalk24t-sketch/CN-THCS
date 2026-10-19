@@ -549,7 +549,7 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
                     </div>
                     <p>• Trắc nghiệm: Bấm chọn đáp án đúng nhất (A, B, C hoặc D).</p>
                     <p>• Tự luận: Trình bày câu trả lời ngắn gọn, rõ ý vào từng khung.</p>
-                    <p>• Sau khi nộp, hệ thống sẽ tự chấm điểm trắc nghiệm và gửi bài về cho Thầy Tài.</p>
+                    <p>• Sau khi nộp, hệ thống sẽ tự chấm điểm trắc nghiệm và gửi bài về Bàn giáo viên TỔ STEM FSCBN.</p>
                   </div>
 
                   <button
@@ -902,7 +902,7 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
                   <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-800 flex items-center justify-between">
                     <h3 className="font-cyber font-bold text-sm text-purple-300 flex items-center gap-2">
                       <BookOpen className="w-4 h-4 text-purple-400" />
-                      ĐÁP ÁN CHUẨN PHẦN TỰ LUẬN (GỢI Ý CỦA THẦY TÀI)
+                      ĐÁP ÁN CHUẨN PHẦN TỰ LUẬN (HƯỚNG DẪN CỦA TỔ STEM FSCBN)
                     </h3>
                   </div>
 
