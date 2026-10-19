@@ -4,6 +4,8 @@ import {
   ALL_GRADE_EXAMS,
   StudentSubmission,
   TEACHER_EXAM_PASS,
+  TEACHER_PASSWORDS,
+  isTeacherPasswordValid,
   EXAM_STORAGE_KEY,
 } from '../data/examData';
 import {
@@ -211,14 +213,14 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
   // Teacher Authentication
   const handleTeacherLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (teacherPasswordInput === TEACHER_EXAM_PASS) {
+    if (isTeacherPasswordValid(teacherPasswordInput)) {
       playSuccessChirp();
       setIsTeacherAuthenticated(true);
       setPasswordError('');
       loadSubmissions();
     } else {
       playCyberBeep(300, 'sawtooth', 0.1);
-      setPasswordError('Mật khẩu không chính xác! (Mật khẩu Thầy Tài: taind93)');
+      setPasswordError('Mật khẩu không chính xác! Vui lòng thử lại.');
     }
   };
 
@@ -370,7 +372,7 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
                 }`}
               >
                 <Lock className="w-3.5 h-3.5" />
-                <span>Bàn làm việc Thầy Tài</span>
+                <span>Bàn giáo viên</span>
               </button>
             </div>
           </div>
@@ -892,10 +894,10 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
                 </div>
                 <div>
                   <h2 className="font-cyber font-bold text-lg text-slate-100">
-                    BÀN LÀM VIỆC GIÁO VIÊN // THẦY TÀI
+                    BÀN LÀM VIỆC GIÁO VIÊN
                   </h2>
                   <p className="text-xs text-slate-400 mt-1">
-                    Vui lòng nhập mật khẩu quản trị để xem danh sách bài nộp và chấm điểm các khối 6, 7, 8, 9
+                    Vui lòng nhập mật khẩu bàn giáo viên để xem danh sách bài nộp và chấm điểm các khối 6, 7, 8, 9
                   </p>
                 </div>
 

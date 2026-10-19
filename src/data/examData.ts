@@ -42,7 +42,15 @@ export interface StudentSubmission {
   status: 'submitted' | 'graded';
 }
 
-export const TEACHER_EXAM_PASS = 'taind93';
+export const TEACHER_PASSWORDS = ['giaovienfscbn', 'taind93'];
+export const TEACHER_EXAM_PASS = 'giaovienfscbn';
+
+export const isTeacherPasswordValid = (input: string): boolean => {
+  if (!input) return false;
+  const trimmed = input.trim();
+  return TEACHER_PASSWORDS.includes(trimmed);
+};
+
 export const EXAM_STORAGE_KEY = 'cong_nghe_thcs_exam_submissions_v2';
 
 // ==========================================
