@@ -32,6 +32,9 @@ import {
   Check,
   Cloud,
   Wifi,
+  ChevronDown,
+  ChevronUp,
+  Table,
 } from 'lucide-react';
 import { playLaserChirp, playSuccessChirp, playCyberBeep } from '../utils/audio';
 import {
@@ -88,6 +91,9 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
   // Teacher grading modal state
   const [gradingEssayScores, setGradingEssayScores] = useState<Record<number, number>>({});
   const [gradingFeedback, setGradingFeedback] = useState('');
+  const [teacherMCFilter, setTeacherMCFilter] = useState<'all' | 'wrong' | 'correct'>('all');
+  const [teacherMCExpanded, setTeacherMCExpanded] = useState(true);
+  const [expandedTableSubId, setExpandedTableSubId] = useState<string | null>(null);
 
   // Teacher Filter
   const [filterGrade, setFilterGrade] = useState<'ALL' | GradeLevel>('ALL');
@@ -1543,76 +1549,312 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
                             </td>
                           </tr>
                         ) : (
-                          filteredSubmissions.map((sub) => (
-                            <tr key={sub.id} className="hover:bg-slate-800/40 transition-colors">
-                              <td className="p-3.5 font-cyber text-amber-400 font-bold">
-                                Lớp {sub.grade}
-                              </td>
-                              <td className="p-3.5 font-semibold text-slate-100">
-                                <div>{sub.studentName}</div>
-                                <div className="text-[11px] font-mono text-cyan-400 font-normal flex items-center gap-1 mt-0.5">
-                                  <span className="text-slate-500">🏷️</span>
-                                  <span>{sub.nickname || 'cute student'}</span>
-                                </div>
-                              </td>
-                              <td className="p-3.5 font-mono text-cyan-400">
-                                {sub.studentClass}
-                              </td>
-                              <td className="p-3.5 text-slate-400 font-mono text-xs">
-                                {sub.submittedAt}
-                              </td>
-                              <td className="p-3.5 text-center font-mono text-cyan-300 font-bold">
-                                {sub.correctCount}/{sub.totalMC}
-                              </td>
-                              <td className="p-3.5 text-center font-mono text-emerald-400 font-bold">
-                                {sub.mcScoreOn10}đ
-                              </td>
-                              <td className="p-3.5 text-center">
-                                <span
-                                  className={`px-2 py-0.5 rounded text-[10px] font-cyber ${
-                                    sub.status === 'graded'
-                                      ? 'bg-purple-950 text-purple-300 border border-purple-700'
-                                      : 'bg-amber-950 text-amber-300 border border-amber-700'
-                                  }`}
-                                >
-                                  {sub.status === 'graded' ? 'Đã chấm tự luận' : 'Chờ chấm'}
-                                </span>
-                              </td>
-                              <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
-                                <button
-                                  onClick={() => {
-                                    setSelectedSubmission(sub);
-                                    if (sub.teacherEssayScores) {
-                                      setGradingEssayScores(sub.teacherEssayScores);
-                                    } else {
-                                      const defaultScores: Record<number, number> = {};
-                                      const subExam = ALL_GRADE_EXAMS[sub.grade];
-                                      const perQuestion = subExam?.essay?.length
-                                        ? 10 / subExam.essay.length
-                                        : 2.5;
-                                      subExam?.essay?.forEach((q) => {
-                                        defaultScores[q.id] = parseFloat(perQuestion.toFixed(1));
-                                      });
-                                      setGradingEssayScores(defaultScores);
-                                    }
-                                    setGradingFeedback(sub.teacherFeedback || '');
-                                  }}
-                                  className="px-2.5 py-1 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-700 text-xs font-cyber inline-flex items-center gap-1 cursor-pointer"
-                                >
-                                  <Eye className="w-3 h-3" />
-                                  <span>Xem &amp; Chấm</span>
-                                </button>
+                          filteredSubmissions.map((sub) => {
+                            const subExam = ALL_GRADE_EXAMS[sub.grade];
+                            const mcList = subExam?.multipleChoice || [];
+                            const wrongQuestions = mcList.filter(
+                              (q) => sub.multipleChoiceAnswers[q.id] !== q.correctAnswer
+                            );
+                            const isExpanded = expandedTableSubId === sub.id;
 
-                                <button
-                                  onClick={() => handleDeleteSubmission(sub.id, sub.studentName)}
-                                  className="p-1 rounded-lg bg-slate-800 hover:bg-rose-950 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer inline-flex items-center"
-                                  title="Xóa bài thi này"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </td>
-                            </tr>
-                          ))
+                            return (
+                              <React.Fragment key={sub.id}>
+                                <tr className="hover:bg-slate-800/40 transition-colors">
+                                  <td className="p-3.5 font-cyber text-amber-400 font-bold">
+                                    Lớp {sub.grade}
+                                  </td>
+                                  <td className="p-3.5 font-semibold text-slate-100">
+                                    <div>{sub.studentName}</div>
+                                    <div className="text-[11px] font-mono text-cyan-400 font-normal flex items-center gap-1 mt-0.5">
+                                      <span className="text-slate-500">🏷️</span>
+                                      <span>{sub.nickname || 'cute student'}</span>
+                                    </div>
+                                  </td>
+                                  <td className="p-3.5 font-mono text-cyan-400">
+                                    {sub.studentClass}
+                                  </td>
+                                  <td className="p-3.5 text-slate-400 font-mono text-xs">
+                                    {sub.submittedAt}
+                                  </td>
+                                  <td className="p-3.5 text-center">
+                                    <div className="flex flex-col items-center gap-1">
+                                      <div className="flex items-center gap-1 font-mono text-xs">
+                                        <span className="px-2 py-0.5 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-600/70 font-bold flex items-center gap-1">
+                                          <Check className="w-3 h-3 text-emerald-400" /> {sub.correctCount} Đúng
+                                        </span>
+                                        {wrongQuestions.length > 0 ? (
+                                          <span className="px-2 py-0.5 rounded bg-rose-950/90 text-rose-300 border border-rose-600/70 font-bold flex items-center gap-1">
+                                            <X className="w-3 h-3 text-rose-400" /> {wrongQuestions.length} Sai
+                                          </span>
+                                        ) : (
+                                          <span className="px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 text-[10px] font-bold">
+                                            100%
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      {/* Highlight specific wrong question numbers */}
+                                      {wrongQuestions.length > 0 ? (
+                                        <div className="text-[11px] font-mono text-rose-300 flex items-center gap-1">
+                                          <span className="text-slate-400 text-[10px]">Sai câu:</span>
+                                          <span className="font-bold underline decoration-rose-500">
+                                            C{wrongQuestions.map((q) => q.id).join(', C')}
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <span className="text-[10px] text-emerald-400 font-sans">
+                                          Đúng toàn bộ {sub.totalMC} câu
+                                        </span>
+                                      )}
+
+                                      <button
+                                        type="button"
+                                        onClick={() => setExpandedTableSubId(isExpanded ? null : sub.id)}
+                                        className="text-[10px] font-cyber text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-0.5 cursor-pointer mt-0.5"
+                                      >
+                                        {isExpanded ? (
+                                          <>Đóng kết quả từng câu <ChevronUp className="w-3 h-3" /></>
+                                        ) : (
+                                          <>Xem kết quả từng câu <ChevronDown className="w-3 h-3" /></>
+                                        )}
+                                      </button>
+                                    </div>
+                                  </td>
+                                  <td className="p-3.5 text-center font-mono text-emerald-400 font-bold text-base">
+                                    {sub.mcScoreOn10}đ
+                                  </td>
+                                  <td className="p-3.5 text-center">
+                                    <span
+                                      className={`px-2 py-0.5 rounded text-[10px] font-cyber ${
+                                        sub.status === 'graded'
+                                          ? 'bg-purple-950 text-purple-300 border border-purple-700'
+                                          : 'bg-amber-950 text-amber-300 border border-amber-700'
+                                      }`}
+                                    >
+                                      {sub.status === 'graded' ? 'Đã chấm tự luận' : 'Chờ chấm'}
+                                    </span>
+                                  </td>
+                                  <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
+                                    <button
+                                      onClick={() => {
+                                        setSelectedSubmission(sub);
+                                        setTeacherMCFilter('all');
+                                        setTeacherMCExpanded(true);
+                                        if (sub.teacherEssayScores) {
+                                          setGradingEssayScores(sub.teacherEssayScores);
+                                        } else {
+                                          const defaultScores: Record<number, number> = {};
+                                          const subExam = ALL_GRADE_EXAMS[sub.grade];
+                                          const perQuestion = subExam?.essay?.length
+                                            ? 10 / subExam.essay.length
+                                            : 2.5;
+                                          subExam?.essay?.forEach((q) => {
+                                            defaultScores[q.id] = parseFloat(perQuestion.toFixed(1));
+                                          });
+                                          setGradingEssayScores(defaultScores);
+                                        }
+                                        setGradingFeedback(sub.teacherFeedback || '');
+                                      }}
+                                      className="px-2.5 py-1 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-700 text-xs font-cyber inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                      <span>Xem &amp; Chấm</span>
+                                    </button>
+
+                                    <button
+                                      onClick={() => handleDeleteSubmission(sub.id, sub.studentName)}
+                                      className="p-1 rounded-lg bg-slate-800 hover:bg-rose-950 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer inline-flex items-center"
+                                      title="Xóa bài thi này"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </td>
+                                </tr>
+
+                                {/* Inline Expanded Row: Question Cards with Full Prompt & 4 Options */}
+                                {isExpanded && (
+                                  <tr className="bg-slate-950/95 border-b border-slate-800">
+                                    <td colSpan={8} className="p-4 sm:p-5">
+                                      <div className="rounded-2xl border border-cyan-800/60 bg-slate-900/95 p-4 sm:p-5 space-y-4 shadow-xl">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                                          <div>
+                                            <div className="flex items-center gap-2">
+                                              <span className="px-2.5 py-0.5 rounded bg-cyan-950 text-cyan-300 text-xs font-cyber font-bold border border-cyan-700">
+                                                CHI TIẾT ĐỀ BÀI &amp; 4 ĐÁP ÁN
+                                              </span>
+                                              <span className="font-cyber font-bold text-sm sm:text-base text-slate-100">
+                                                Học sinh: {sub.studentName} ({sub.studentClass})
+                                              </span>
+                                            </div>
+                                            <p className="text-xs text-slate-400 mt-1">
+                                              Đúng hiển thị <strong className="text-emerald-400">Màu Xanh</strong> · Sai hiển thị <strong className="text-rose-400">Màu Đỏ</strong> kèm đối chiếu rõ ràng
+                                            </p>
+                                          </div>
+
+                                          <div className="flex items-center gap-2.5 text-xs">
+                                            <span className="px-3 py-1 rounded-full bg-emerald-950/90 text-emerald-300 border border-emerald-600 font-mono font-bold flex items-center gap-1">
+                                              <Check className="w-3.5 h-3.5 text-emerald-400" /> {sub.correctCount} Đúng
+                                            </span>
+                                            <span className="px-3 py-1 rounded-full bg-rose-950/90 text-rose-300 border border-rose-600 font-mono font-bold flex items-center gap-1">
+                                              <X className="w-3.5 h-3.5 text-rose-400" /> {wrongQuestions.length} Sai
+                                            </span>
+                                          </div>
+                                        </div>
+
+                                        {/* Full Question Cards matching Student View */}
+                                        <div className="max-h-[560px] overflow-y-auto space-y-4 pr-1.5">
+                                          {mcList.map((q) => {
+                                            const userChoice = sub.multipleChoiceAnswers[q.id];
+                                            const isCorrect = userChoice === q.correctAnswer;
+                                            const hasAnswered = !!userChoice;
+                                            const correctOptObj = q.options.find((o) => o.key === q.correctAnswer);
+                                            const userOptObj = q.options.find((o) => o.key === userChoice);
+
+                                            return (
+                                              <div
+                                                key={q.id}
+                                                className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                                                  isCorrect
+                                                    ? 'bg-emerald-950/15 border-emerald-500/50'
+                                                    : 'bg-rose-950/20 border-rose-500/60 shadow-[0_0_15px_rgba(244,63,94,0.12)]'
+                                                }`}
+                                              >
+                                                {/* Prompt Header */}
+                                                <div className="flex items-start justify-between gap-3 mb-3.5">
+                                                  <div className="font-semibold text-slate-100 flex items-start gap-2.5 text-sm sm:text-base leading-snug">
+                                                    <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 font-mono text-cyan-400 font-bold shrink-0 text-xs mt-0.5">
+                                                      Câu {q.id}
+                                                    </span>
+                                                    <span>{q.question}</span>
+                                                  </div>
+
+                                                  <div className="shrink-0">
+                                                    {isCorrect ? (
+                                                      <span className="px-3 py-1 rounded-full text-xs font-cyber font-bold bg-emerald-950 text-emerald-300 border border-emerald-600 flex items-center gap-1">
+                                                        <Check className="w-3.5 h-3.5" /> ĐÚNG (+{(10 / sub.totalMC).toFixed(2)}đ)
+                                                      </span>
+                                                    ) : hasAnswered ? (
+                                                      <span className="px-3 py-1 rounded-full text-xs font-cyber font-bold bg-rose-950 text-rose-300 border border-rose-600 flex items-center gap-1">
+                                                        <X className="w-3.5 h-3.5" /> SAI (0đ)
+                                                      </span>
+                                                    ) : (
+                                                      <span className="px-3 py-1 rounded-full text-xs font-cyber font-bold bg-amber-950 text-amber-300 border border-amber-600 flex items-center gap-1">
+                                                        <AlertCircle className="w-3.5 h-3.5" /> CHƯA LÀM (0đ)
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                </div>
+
+                                                {/* 4 Options: Full text, wrapping naturally without truncation */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs sm:text-sm font-sans">
+                                                  {q.options.map((opt) => {
+                                                    const isUserPick = userChoice === opt.key;
+                                                    const isCorrectAnswer = q.correctAnswer === opt.key;
+
+                                                    let optStyles = 'bg-slate-950/60 text-slate-300 border-slate-800/80';
+                                                    if (isCorrectAnswer) {
+                                                      optStyles =
+                                                        'bg-emerald-950/80 text-emerald-100 border-emerald-500/80 font-medium shadow-[0_0_12px_rgba(16,185,129,0.25)]';
+                                                    } else if (isUserPick && !isCorrect) {
+                                                      optStyles =
+                                                        'bg-rose-950/80 text-rose-100 border-rose-500/80 font-medium shadow-[0_0_12px_rgba(244,63,94,0.25)]';
+                                                    }
+
+                                                    return (
+                                                      <div
+                                                        key={opt.key}
+                                                        className={`p-3 rounded-xl border flex items-start gap-2.5 transition-all ${optStyles}`}
+                                                      >
+                                                        <span
+                                                          className={`w-5 h-5 rounded-full flex items-center justify-center font-mono text-xs font-bold shrink-0 mt-0.5 ${
+                                                            isCorrectAnswer
+                                                              ? 'bg-emerald-400 text-slate-950'
+                                                              : isUserPick
+                                                              ? 'bg-rose-500 text-slate-950'
+                                                              : 'bg-slate-800 text-slate-400'
+                                                          }`}
+                                                        >
+                                                          {opt.key}
+                                                        </span>
+
+                                                        <div className="flex-1 leading-relaxed break-words">
+                                                          <span>{opt.text}</span>
+                                                        </div>
+
+                                                        {isCorrectAnswer && (
+                                                          <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-cyber font-bold bg-emerald-900 text-emerald-200 border border-emerald-600">
+                                                            ✓ Đáp án đúng
+                                                          </span>
+                                                        )}
+                                                        {!isCorrect && isUserPick && (
+                                                          <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-cyber font-bold bg-rose-900 text-rose-200 border border-rose-600">
+                                                            ✗ Học sinh chọn
+                                                          </span>
+                                                        )}
+                                                      </div>
+                                                    );
+                                                  })}
+                                                </div>
+
+                                                {/* Comparison Review Bar */}
+                                                <div className="mt-3 pt-2.5 border-t border-slate-800/80 text-xs font-sans">
+                                                  {!isCorrect ? (
+                                                    <div className="text-rose-300 flex items-center gap-1.5 leading-relaxed">
+                                                      <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                                                      <span>
+                                                        <strong>Thí sinh chọn:</strong> [{userChoice || 'Để trống'}] {userOptObj?.text || ''}{' '}
+                                                        — <strong className="text-emerald-300">Đáp án chuẩn:</strong> [{q.correctAnswer}] {correctOptObj?.text}
+                                                      </span>
+                                                    </div>
+                                                  ) : (
+                                                    <div className="text-emerald-300 flex items-center gap-1.5 leading-relaxed">
+                                                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                                                      <span>
+                                                        <strong>Chính xác:</strong> Thí sinh chọn đúng đáp án [{q.correctAnswer}]: {correctOptObj?.text}
+                                                      </span>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+
+                                        <div className="flex justify-end pt-1">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setSelectedSubmission(sub);
+                                              setTeacherMCFilter('all');
+                                              setTeacherMCExpanded(true);
+                                              if (sub.teacherEssayScores) {
+                                                setGradingEssayScores(sub.teacherEssayScores);
+                                              } else {
+                                                const defaultScores: Record<number, number> = {};
+                                                const subExam = ALL_GRADE_EXAMS[sub.grade];
+                                                const perQuestion = subExam?.essay?.length
+                                                  ? 10 / subExam.essay.length
+                                                  : 2.5;
+                                                subExam?.essay?.forEach((q) => {
+                                                  defaultScores[q.id] = parseFloat(perQuestion.toFixed(1));
+                                                });
+                                                setGradingEssayScores(defaultScores);
+                                              }
+                                              setGradingFeedback(sub.teacherFeedback || '');
+                                            }}
+                                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-600 hover:brightness-110 text-slate-950 font-cyber font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-lg"
+                                          >
+                                            <FileText className="w-4 h-4" />
+                                            <span>Mở toàn bộ giao diện Chấm Tự Luận của thí sinh này</span>
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
@@ -1655,20 +1897,350 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
 
                       {/* Modal Body */}
                       <div className="p-5 overflow-y-auto space-y-6 flex-1 text-xs sm:text-sm">
-                        {/* MC Score Banner */}
-                        <div className="p-4 rounded-xl bg-cyan-950/40 border border-cyan-800/60 flex items-center justify-between">
-                          <div>
-                            <div className="font-cyber font-bold text-cyan-300">
-                              KẾT QUẢ PHẦN TRẮC NGHIỆM ({selectedSubmission.totalMC} CÂU)
+                        {/* PART I: MULTIPLE CHOICE DETAILS FOR TEACHER */}
+                        {(() => {
+                          const subExam = ALL_GRADE_EXAMS[selectedSubmission.grade];
+                          const mcList = subExam?.multipleChoice || [];
+                          const wrongMCList = mcList.filter(
+                            (q) => selectedSubmission.multipleChoiceAnswers[q.id] !== q.correctAnswer
+                          );
+                          const correctMCList = mcList.filter(
+                            (q) => selectedSubmission.multipleChoiceAnswers[q.id] === q.correctAnswer
+                          );
+
+                          const filteredMCList =
+                            teacherMCFilter === 'wrong'
+                              ? wrongMCList
+                              : teacherMCFilter === 'correct'
+                              ? correctMCList
+                              : mcList;
+
+                          return (
+                            <div className="space-y-3.5 rounded-2xl bg-slate-950/80 border border-cyan-800/60 p-4 sm:p-5 shadow-lg">
+                              {/* Header & Stats Banner */}
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-cyber font-bold bg-cyan-950 text-cyan-300 border border-cyan-700">
+                                      PHẦN I
+                                    </span>
+                                    <h4 className="font-cyber font-bold text-sm sm:text-base text-cyan-200 flex items-center gap-2">
+                                      <HelpCircle className="w-4 h-4 text-cyan-400" />
+                                      KẾT QUẢ CHI TIẾT TỪNG CÂU TRẮC NGHIỆM ({selectedSubmission.totalMC} CÂU)
+                                    </h4>
+                                  </div>
+                                  <p className="text-xs text-slate-400 mt-1">
+                                    Chi tiết từng câu: đánh dấu Đúng/Sai rõ ràng, đối chiếu lựa chọn của học sinh và đáp án chuẩn.
+                                  </p>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                  <div className="text-right">
+                                    <div className="text-xl font-cyber font-bold text-emerald-400 font-mono">
+                                      {selectedSubmission.mcScoreOn10} / 10 ĐIỂM
+                                    </div>
+                                    <div className="text-[11px] font-mono text-cyan-300">
+                                      Đúng {selectedSubmission.correctCount}/{selectedSubmission.totalMC} câu ({Math.round((selectedSubmission.correctCount / selectedSubmission.totalMC) * 100)}%)
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => setTeacherMCExpanded(!teacherMCExpanded)}
+                                    className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 transition-colors cursor-pointer"
+                                    title={teacherMCExpanded ? 'Thu gọn danh sách câu' : 'Mở rộng danh sách câu'}
+                                  >
+                                    {teacherMCExpanded ? (
+                                      <ChevronUp className="w-4 h-4 text-cyan-400" />
+                                    ) : (
+                                      <ChevronDown className="w-4 h-4 text-cyan-400" />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Metric Cards Row */}
+                              <div className="grid grid-cols-3 gap-2.5">
+                                <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-center">
+                                  <span className="text-[10px] font-cyber text-slate-400 block uppercase">Tổng số câu</span>
+                                  <span className="font-mono font-bold text-cyan-300 text-base">{selectedSubmission.totalMC} câu</span>
+                                </div>
+                                <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/50 text-center">
+                                  <span className="text-[10px] font-cyber text-emerald-400 block uppercase">Số câu Đúng</span>
+                                  <span className="font-mono font-bold text-emerald-300 text-base flex items-center justify-center gap-1">
+                                    <Check className="w-4 h-4 text-emerald-400" />
+                                    {selectedSubmission.correctCount} câu
+                                  </span>
+                                </div>
+                                <div className="p-2.5 rounded-xl bg-rose-950/40 border border-rose-500/50 text-center">
+                                  <span className="text-[10px] font-cyber text-rose-400 block uppercase">Số câu Sai</span>
+                                  <span className="font-mono font-bold text-rose-300 text-base flex items-center justify-center gap-1">
+                                    <X className="w-4 h-4 text-rose-400" />
+                                    {wrongMCList.length} câu
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Bubble Sheet Matrix (1 đến N) for instant teacher inspection */}
+                              <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1.5">
+                                <div className="flex items-center justify-between text-[11px] font-cyber text-slate-400">
+                                  <span>BẢNG TỔNG QUAN PHIẾU TRẢ LỜI CỦA THÍ SINH:</span>
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-emerald-400 font-sans flex items-center gap-1">
+                                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Đúng
+                                    </span>
+                                    <span className="text-rose-400 font-sans flex items-center gap-1">
+                                      <span className="w-2 h-2 rounded-full bg-rose-500"></span> Sai
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-wrap gap-1.5 pt-1 max-h-36 overflow-y-auto">
+                                  {mcList.map((q) => {
+                                    const userChoice = selectedSubmission.multipleChoiceAnswers[q.id];
+                                    const isCorrect = userChoice === q.correctAnswer;
+                                    return (
+                                      <a
+                                        key={q.id}
+                                        href={`#teacher-mc-q-${q.id}`}
+                                        className={`px-2 py-1 rounded-lg font-mono text-[11px] flex items-center gap-1 border transition-all ${
+                                          isCorrect
+                                            ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300'
+                                            : userChoice
+                                            ? 'bg-rose-950/80 border-rose-500/60 text-rose-300 font-bold'
+                                            : 'bg-amber-950/80 border-amber-500/60 text-amber-300'
+                                        }`}
+                                        title={`Câu ${q.id}: Học sinh chọn [${userChoice || 'Để trống'}] - Đáp án đúng [${q.correctAnswer}]`}
+                                      >
+                                        <span>C{q.id}:</span>
+                                        <span>{userChoice || '-'}</span>
+                                        {isCorrect ? (
+                                          <Check className="w-3 h-3 text-emerald-400" />
+                                        ) : (
+                                          <span className="text-rose-400 font-bold text-[10px]">({q.correctAnswer})</span>
+                                        )}
+                                      </a>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* Wrong Questions Callout Box for Rapid Inspection */}
+                              {wrongMCList.length > 0 ? (
+                                <div className="p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/50 space-y-2">
+                                  <div className="flex items-center justify-between text-xs font-cyber text-rose-300">
+                                    <span className="flex items-center gap-1.5 font-bold">
+                                      <X className="w-4 h-4 text-rose-400" />
+                                      CÁC CÂU HỌC SINH LÀM SAI ({wrongMCList.length} CÂU):
+                                    </span>
+                                    <span className="text-[11px] text-slate-400 font-sans">
+                                      Bấm vào từng câu để xem đối chiếu đáp án chi tiết
+                                    </span>
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-2">
+                                    {wrongMCList.map((q) => {
+                                      const userChoice = selectedSubmission.multipleChoiceAnswers[q.id];
+                                      return (
+                                        <button
+                                          key={q.id}
+                                          type="button"
+                                          onClick={() => {
+                                            setTeacherMCFilter('wrong');
+                                            setTeacherMCExpanded(true);
+                                          }}
+                                          className="px-2.5 py-1 rounded-lg bg-rose-950/80 border border-rose-600/80 text-rose-200 text-xs font-mono flex items-center gap-1.5 hover:bg-rose-900 transition-colors cursor-pointer"
+                                        >
+                                          <span className="font-bold text-rose-400">Câu {q.id}:</span>
+                                          <span>HS chọn [{userChoice || 'Để trống'}] ✗</span>
+                                          <span className="text-emerald-400 font-bold">→ Chuẩn [{q.correctAnswer}] ✓</span>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/50 flex items-center gap-2 text-xs text-emerald-300 font-cyber">
+                                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                                  <span>XUẤT SẮC: Thí sinh trả lời ĐÚNG 100% toàn bộ {selectedSubmission.totalMC} câu trắc nghiệm!</span>
+                                </div>
+                              )}
+
+                              {/* Filter buttons */}
+                              <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setTeacherMCFilter('all')}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-cyber transition-all cursor-pointer ${
+                                      teacherMCFilter === 'all'
+                                        ? 'bg-cyan-950 text-cyan-300 border border-cyan-400 font-bold shadow-[0_0_8px_rgba(6,182,212,0.3)]'
+                                        : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200'
+                                    }`}
+                                  >
+                                    Tất cả ({mcList.length} câu)
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setTeacherMCFilter('wrong')}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-cyber transition-all cursor-pointer flex items-center gap-1 ${
+                                      teacherMCFilter === 'wrong'
+                                        ? 'bg-rose-950 text-rose-300 border border-rose-400 font-bold shadow-[0_0_8px_rgba(244,63,94,0.3)]'
+                                        : 'bg-slate-900 text-rose-400 border border-rose-900/40 hover:bg-rose-950/40'
+                                    }`}
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                    Chỉ xem câu Sai ({wrongMCList.length} câu)
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setTeacherMCFilter('correct')}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-cyber transition-all cursor-pointer flex items-center gap-1 ${
+                                      teacherMCFilter === 'correct'
+                                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-400 font-bold shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+                                        : 'bg-slate-900 text-emerald-400 border border-emerald-900/40 hover:bg-emerald-950/40'
+                                    }`}
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    Chỉ xem câu Đúng ({correctMCList.length} câu)
+                                  </button>
+                                </div>
+
+                                <span className="text-[11px] font-mono text-slate-400">
+                                  Đang hiển thị: <strong className="text-cyan-300">{filteredMCList.length}</strong> / {mcList.length} câu
+                                </span>
+                              </div>
+
+                              {/* Question Cards: Exact layout as Student View, with full prompt and 4 full options */}
+                              {teacherMCExpanded && (
+                                <div className="space-y-4 pt-2 max-h-[520px] overflow-y-auto pr-1">
+                                  {filteredMCList.length === 0 ? (
+                                    <div className="p-5 text-center text-slate-400 italic bg-slate-900/60 rounded-xl border border-slate-800">
+                                      Không có câu nào trong bộ lọc này.
+                                    </div>
+                                  ) : (
+                                    filteredMCList.map((q) => {
+                                      const userChoice = selectedSubmission.multipleChoiceAnswers[q.id];
+                                      const isCorrect = userChoice === q.correctAnswer;
+                                      const hasAnswered = !!userChoice;
+                                      const correctOptObj = q.options.find((o) => o.key === q.correctAnswer);
+                                      const userOptObj = q.options.find((o) => o.key === userChoice);
+
+                                      return (
+                                        <div
+                                          key={q.id}
+                                          id={`teacher-mc-q-${q.id}`}
+                                          className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                                            isCorrect
+                                              ? 'bg-emerald-950/15 border-emerald-500/50'
+                                              : 'bg-rose-950/20 border-rose-500/60 shadow-[0_0_15px_rgba(244,63,94,0.12)]'
+                                          }`}
+                                        >
+                                          {/* Prompt Header */}
+                                          <div className="flex items-start justify-between gap-3 mb-3.5">
+                                            <div className="font-semibold text-slate-100 flex items-start gap-2.5 text-sm sm:text-base leading-snug">
+                                              <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 font-mono text-cyan-400 font-bold shrink-0 text-xs mt-0.5">
+                                                Câu {q.id}
+                                              </span>
+                                              <span className="font-sans">{q.question}</span>
+                                            </div>
+
+                                            <div className="shrink-0">
+                                              {isCorrect ? (
+                                                <span className="px-3 py-1 rounded-full text-xs font-cyber font-bold bg-emerald-950 text-emerald-300 border border-emerald-600 flex items-center gap-1">
+                                                  <Check className="w-3.5 h-3.5" /> ĐÚNG (+{(10 / selectedSubmission.totalMC).toFixed(2)}đ)
+                                                </span>
+                                              ) : hasAnswered ? (
+                                                <span className="px-3 py-1 rounded-full text-xs font-cyber font-bold bg-rose-950 text-rose-300 border border-rose-600 flex items-center gap-1">
+                                                  <X className="w-3.5 h-3.5" /> SAI (0đ)
+                                                </span>
+                                              ) : (
+                                                <span className="px-3 py-1 rounded-full text-xs font-cyber font-bold bg-amber-950 text-amber-300 border border-amber-600 flex items-center gap-1">
+                                                  <AlertCircle className="w-3.5 h-3.5" /> CHƯA LÀM (0đ)
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          {/* 4 Options: Full text, wrapping naturally without truncation */}
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs sm:text-sm font-sans">
+                                            {q.options.map((opt) => {
+                                              const isUserPick = userChoice === opt.key;
+                                              const isCorrectAnswer = q.correctAnswer === opt.key;
+
+                                              let optStyles = 'bg-slate-950/60 text-slate-300 border-slate-800/80';
+                                              if (isCorrectAnswer) {
+                                                optStyles =
+                                                  'bg-emerald-950/80 text-emerald-100 border-emerald-500/80 font-medium shadow-[0_0_12px_rgba(16,185,129,0.25)]';
+                                              } else if (isUserPick && !isCorrect) {
+                                                optStyles =
+                                                  'bg-rose-950/80 text-rose-100 border-rose-500/80 font-medium shadow-[0_0_12px_rgba(244,63,94,0.25)]';
+                                              }
+
+                                              return (
+                                                <div
+                                                  key={opt.key}
+                                                  className={`p-3 rounded-xl border flex items-start gap-2.5 transition-all ${optStyles}`}
+                                                >
+                                                  <span
+                                                    className={`w-5 h-5 rounded-full flex items-center justify-center font-mono text-xs font-bold shrink-0 mt-0.5 ${
+                                                      isCorrectAnswer
+                                                        ? 'bg-emerald-400 text-slate-950'
+                                                        : isUserPick
+                                                        ? 'bg-rose-500 text-slate-950'
+                                                        : 'bg-slate-800 text-slate-400'
+                                                    }`}
+                                                  >
+                                                    {opt.key}
+                                                  </span>
+
+                                                  <div className="flex-1 leading-relaxed break-words">
+                                                    <span>{opt.text}</span>
+                                                  </div>
+
+                                                  {isCorrectAnswer && (
+                                                    <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-cyber font-bold bg-emerald-900 text-emerald-200 border border-emerald-600">
+                                                      ✓ Đáp án đúng
+                                                    </span>
+                                                  )}
+                                                  {!isCorrect && isUserPick && (
+                                                    <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-cyber font-bold bg-rose-900 text-rose-200 border border-rose-600">
+                                                      ✗ Học sinh chọn
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+
+                                          {/* Comparison Review Bar */}
+                                          <div className="mt-3 pt-2.5 border-t border-slate-800/80 text-xs font-sans">
+                                            {!isCorrect ? (
+                                              <div className="text-rose-300 flex items-center gap-1.5 leading-relaxed">
+                                                <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                                                <span>
+                                                  <strong>Thí sinh chọn:</strong> [{userChoice || 'Để trống'}] {userOptObj?.text || ''}{' '}
+                                                  — <strong className="text-emerald-300">Đáp án chuẩn:</strong> [{q.correctAnswer}] {correctOptObj?.text}
+                                                </span>
+                                              </div>
+                                            ) : (
+                                              <div className="text-emerald-300 flex items-center gap-1.5 leading-relaxed">
+                                                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                                                <span>
+                                                  <strong>Chính xác:</strong> Thí sinh chọn đúng đáp án [{q.correctAnswer}]: {correctOptObj?.text}
+                                                </span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              )}
                             </div>
-                            <div className="text-xs text-slate-400 mt-0.5">
-                              Đúng {selectedSubmission.correctCount}/{selectedSubmission.totalMC} câu
-                            </div>
-                          </div>
-                          <div className="text-xl font-cyber font-bold text-emerald-400 font-mono">
-                            {selectedSubmission.mcScoreOn10} / 10 ĐIỂM
-                          </div>
-                        </div>
+                          );
+                        })()}
 
                         {/* Essay Questions Grading Section */}
                         <div className="space-y-4">
