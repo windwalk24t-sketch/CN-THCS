@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Terminal, Award, CheckCircle, Sparkles, QrCode } from 'lucide-react';
+import { GraduationCap, Terminal, Award, CheckCircle, Sparkles, QrCode } from 'lucide-react';
 import { GradeLevel } from '../types/curriculum';
 import { ALL_GRADE_EXAMS } from '../data/examData';
 import robotHeroImg from '../assets/images/cyber_robot_hero_1791029757334.jpg';
@@ -158,7 +158,7 @@ export const CyberHero: React.FC<CyberHeroProps> = ({
             <div className="relative rounded-2xl overflow-hidden border border-cyan-500/40 shadow-[0_0_35px_rgba(6,182,212,0.25)] group">
               <img
                 src={robotHeroImg}
-                alt="Robot Teacher Nguyễn Đức Tài - Hệ thống Ôn thi Công nghệ THCS"
+                alt="Giáo viên Nguyễn Đức Tài - Hệ thống Ôn thi Công nghệ THCS"
                 className="w-full h-48 sm:h-64 object-cover object-center group-hover:scale-105 transition-transform duration-700"
                 referrerPolicy="no-referrer"
               />
@@ -167,8 +167,8 @@ export const CyberHero: React.FC<CyberHeroProps> = ({
               {/* Overlay HUD Badges */}
               <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between p-2.5 rounded-lg bg-slate-950/80 backdrop-blur-md border border-cyan-500/30 text-xs">
                 <div className="flex items-center gap-2">
-                  <Bot className="w-4 h-4 text-cyan-400" />
-                  <span className="font-cyber text-slate-200 font-semibold">BOT-TÀI 4.0</span>
+                  <GraduationCap className="w-4 h-4 text-cyan-400" />
+                  <span className="font-cyber text-slate-200 font-semibold tracking-wide">GIÁO VIÊN NGUYỄN ĐỨC TÀI</span>
                 </div>
                 <div className="font-mono text-[11px] text-amber-300 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />

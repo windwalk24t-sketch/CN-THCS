@@ -284,7 +284,7 @@ export const LessonDetailModal: React.FC<LessonDetailModalProps> = ({
                     TRẮC NGHIỆM KỸ THUẬT CÔNG NGHỆ
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Kiểm tra và củng cố kiến thức bài học cùng Robot Bot-Tài.
+                    Kiểm tra và củng cố kiến thức bài học cùng Giáo viên Nguyễn Đức Tài.
                   </p>
                 </div>
                 {quizSubmitted && (
