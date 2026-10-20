@@ -1,0 +1,35 @@
+{
+  "entities": {
+    "StudentSubmission": {
+      "title": "Student Submission",
+      "description": "Represents an exam submission by a THCS student across grades 6, 7, 8, 9",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "grade": { "type": "number", "enum": [6, 7, 8, 9] },
+        "studentName": { "type": "string" },
+        "nickname": { "type": "string" },
+        "studentClass": { "type": "string" },
+        "submittedAt": { "type": "string" },
+        "durationMinutes": { "type": "number" },
+        "multipleChoiceAnswers": { "type": "object" },
+        "essayAnswers": { "type": "object" },
+        "correctCount": { "type": "number" },
+        "totalMC": { "type": "number" },
+        "mcScoreOn10": { "type": "number" },
+        "teacherEssayScores": { "type": "object" },
+        "teacherFeedback": { "type": "string" },
+        "finalScore": { "type": "number" },
+        "status": { "type": "string", "enum": ["submitted", "graded"] },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["grade", "studentName", "studentClass", "submittedAt", "correctCount", "totalMC", "mcScoreOn10", "status"]
+    }
+  },
+  "firestore": {
+    "/exam_submissions/{submissionId}": {
+      "schema": "StudentSubmission",
+      "description": "Collection of student exam submissions for live syncing across all devices"
+    }
+  }
+}

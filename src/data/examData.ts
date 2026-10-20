@@ -377,30 +377,30 @@ export const GRADE_8_EXAM: GradeExamSet = {
       question: 'Vật liệu cơ khí là gì? Hãy nêu một vài loại vật liệu cơ khí thường gặp trong đời sống.',
       suggestedAnswer: [
         'Vật liệu cơ khí là những nguyên vật liệu được dùng trong ngành cơ khí để chế tạo các chi tiết, máy móc và sản phẩm cơ khí.',
-        'Ví dụ thường gặp:',
-        '+ Thép: làm dao, kéo, chi tiết máy…',
-        '+ Nhôm: chế tạo máy, vỏ khung, …',
-        '+ Đồng: dây dẫn điện…',
+        'Ví dụ thường gặp trong đời sống:',
+        '• Thép: làm dao, kéo, chi tiết máy…',
+        '• Nhôm: chế tạo máy, vỏ khung, …',
+        '• Đồng: dây dẫn điện…',
       ],
     },
     {
       id: 2,
-      question: 'Em hãy trình bày các bước đọc bản vẽ nhà.',
+      question: 'Em hãy trình bày các bước để đọc bản vẽ nhà? Mặt nào của ngôi nhà thể hiện được diện tích đất xây dựng ngôi nhà.',
       suggestedAnswer: [
-        'Các bước đọc bản vẽ nhà là:',
-        'Bước 1: Khung tên: tên gọi ngôi nhà, tỉ lệ.',
-        'Bước 2: Hình biểu diễn: mặt đứng, mặt bằng, mặt cắt.',
-        'Bước 3: Kích thước: kích thước chung, kích thước bộ phận.',
-        'Bước 4: Các bộ phận: Số phòng, số cửa đi và cửa sổ.',
+        'Các bước để đọc bản vẽ nhà:',
+        '• Bước 1: Khung tên: tên gọi ngôi nhà, tỉ lệ.',
+        '• Bước 2: Hình biểu diễn: mặt đứng, mặt bằng, mặt cắt.',
+        '• Bước 3: Kích thước: kích thước chung, kích thước bộ phận.',
+        '• Bước 4: Các bộ phận: Số phòng, số cửa đi và cửa sổ.',
+        '👉 Để xác định diện tích đất xây dựng nhà ở ta đọc số liệu kích thước ở mặt bằng.',
       ],
     },
     {
       id: 3,
       question: 'Vật liệu phi kim loại có những loại nào? Em hãy kể tên một số đồ dùng sản phẩm sử dụng vật liệu phi kim.',
       suggestedAnswer: [
-        'Phân loại vật liệu phi kim:',
-        'Chất dẻo, cao su, gốm sứ, thuỷ tinh, chất dẻo nhiệt, chất dẻo nhiệt rắn, cao su nhân tạo, cao su tự nhiên…',
-        'Các sản phẩm thường dùng: dép cao su, dép nhựa, rổ, cốc, ly, săm lốp ô tô…',
+        'Vật liệu phi kim có: chất dẻo, cao su, gốm sứ, thuỷ tinh, chất dẻo nhiệt, chất dẻo nhiệt rắn, cao su nhân tạo, cao su tự nhiên…',
+        'Các sản phẩm dùng vật liệu phi kim loại là: dép cao su, dép nhựa, rổ, cốc, ly, săm lốp…',
       ],
     },
     {
@@ -408,11 +408,11 @@ export const GRADE_8_EXAM: GradeExamSet = {
       question: 'Em hãy trình bày nội dung của bản vẽ chi tiết? Để biết người thiết kế bản vẽ, chúng ta cần đọc thông tin ở phần nào?',
       suggestedAnswer: [
         'Nội dung của bản vẽ chi tiết:',
-        '- Hình biểu diễn: gồm hình chiếu và hình cắt, thể hiện hình dạng chi tiết.',
-        '- Kích thước: kích thước chung và kích thước thành phần của chi tiết.',
-        '- Yêu cầu kĩ thuật: các chỉ dẫn về gia công, xử lí bề mặt.',
+        '- Hình biểu diễn: gồm hình chiếu và hình cắt',
+        '- Kích thước: kích thước chung và kích thước thành phần',
+        '- Yêu cầu kĩ thuật: các chỉ dẫn gia công, xử lí bề mặt',
         '- Khung tên: tên gọi chi tiết, vật liệu, tỉ lệ, tên người có trách nhiệm với bản vẽ.',
-        'Để biết người thiết kế bản vẽ, chúng ta cần đọc thông tin ở phần khung tên.',
+        '👉 Để biết người thiết kế bản vẽ, chúng ta cần đọc thông tin ở phần khung tên.',
       ],
     },
   ],
@@ -727,33 +727,36 @@ export const GRADE_9_EXAM: GradeExamSet = {
   essay: [
     {
       id: 1,
-      question: 'Tầm quan trọng của nghề nghiệp đối với con người và xã hội',
+      question: 'Em hãy trình bày tầm quan trọng của nghề nghiệp đối với con người và xã hội.',
       suggestedAnswer: [
-        'Đối với con người: Tạo thu nhập, bảo đảm cuộc sống, phát huy năng lực và sở trường.',
-        'Đối với xã hội: Tạo ra sản phẩm, dịch vụ, đáp ứng nhu cầu và thúc đẩy phát triển kinh tế – xã hội.',
+        'Tầm quan trọng của nghề nghiệp đối với con người và xã hội:',
+        '• Đối với con người: Tạo thu nhập, bảo đảm cuộc sống, phát huy năng lực và sở trường.',
+        '• Đối với xã hội: Tạo ra sản phẩm, dịch vụ, đáp ứng nhu cầu và thúc đẩy phát triển kinh tế – xã hội.',
       ],
     },
     {
       id: 2,
-      question: 'Các hướng đi sau khi tốt nghiệp THCS',
+      question: 'Em hãy trình bày các hướng đi sau khi tốt nghiệp THCS trong lĩnh vực kĩ thuật công nghệ.',
       suggestedAnswer: [
-        'Hướng 1: Học sơ cấp, trung cấp nghề thuộc lĩnh vực kĩ thuật, công nghệ.',
-        'Hướng 2: Học tại Trung tâm GDNN – GDTX, vừa học THPT vừa học nghề.',
-        'Hướng 3: Học THPT, sau đó học cao đẳng hoặc đại học ngành kĩ thuật, công nghệ.',
+        'Các hướng đi sau khi tốt nghiệp THCS:',
+        '• Hướng 1: Học sơ cấp, trung cấp nghề thuộc lĩnh vực kĩ thuật, công nghệ.',
+        '• Hướng 2: Học tại Trung tâm GDNN – GDTX, vừa học THPT vừa học nghề.',
+        '• Hướng 3: Học THPT, sau đó học cao đẳng hoặc đại học ngành kĩ thuật, công nghệ.',
       ],
     },
     {
       id: 3,
-      question: 'Vai trò của thị trường lao động trong định hướng nghề nghiệp',
+      question: 'Em hãy trình bày vai trò của thị trường lao động trong định hướng nghề nghiệp.',
       suggestedAnswer: [
-        'Cung cấp thông tin về nhu cầu tuyển dụng, việc làm.',
-        'Cho biết yêu cầu về trình độ và kĩ năng của nghề.',
-        'Giúp lựa chọn ngành học, nghề nghiệp phù hợp.',
+        'Vai trò của thị trường lao động trong định hướng nghề nghiệp:',
+        '• Cung cấp thông tin về nhu cầu tuyển dụng, việc làm.',
+        '• Cho biết yêu cầu về trình độ và kĩ năng của nghề.',
+        '• Giúp lựa chọn ngành học, nghề nghiệp phù hợp..',
       ],
     },
     {
       id: 4,
-      question: 'Quy trình lựa chọn nghề nghiệp',
+      question: 'Em hãy trình bày quy trình lựa chọn nghề nghiệp.',
       suggestedAnswer: [
         'Gồm 3 bước cơ bản:',
         '1. Đánh giá bản thân: Xác định sở thích, năng lực, tính cách, sức khỏe.',
@@ -1408,7 +1411,7 @@ export const GRADE_7_EXAM: GradeExamSet = {
   essay: [
     {
       id: 1,
-      question: 'Trình bày một số phương pháp thu hoạch sản phẩm trồng trọt (thu hoạch nông sản) ở địa phương?',
+      question: 'Em hãy trình bày một số phương pháp thu hoạch sản phẩm trồng trọt (thu hoạch nông sản) ở địa phương?',
       suggestedAnswer: [
         'Phương pháp thu hoạch sản phẩm trồng trọt ở địa phương em:',
         '- Đào/dỡ: khoai, sắn',

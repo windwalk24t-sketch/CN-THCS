@@ -44,7 +44,7 @@ export const CyberQRCard: React.FC<CyberQRCardProps> = ({ onOpenModal }) => {
         {thumbUrl ? (
           <img
             src={thumbUrl}
-            alt="Mã QR Web Thầy Tài"
+            alt="Mã QR Web TỔ STEM FSCBN"
             className="w-full h-full object-contain"
           />
         ) : (

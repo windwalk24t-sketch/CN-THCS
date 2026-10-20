@@ -477,7 +477,7 @@ void loop() {
                     <FileText className="w-4 h-4 text-cyan-400" /> SỔ TAY GHI CHÚ BÀI HỌC
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Ghi lại những ý tưởng, bài tập hoặc câu hỏi em cần Thầy Tài giải đáp.
+                    Ghi lại những ý tưởng, bài tập hoặc câu hỏi em cần TỔ STEM FSCBN giải đáp.
                   </p>
                 </div>
                 <button

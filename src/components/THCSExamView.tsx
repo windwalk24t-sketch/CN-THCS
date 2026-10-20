@@ -26,8 +26,20 @@ import {
   X,
   HelpCircle,
   Sparkles,
+  Printer,
+  XCircle,
+  AlertCircle,
+  Check,
+  Cloud,
+  Wifi,
 } from 'lucide-react';
 import { playLaserChirp, playSuccessChirp, playCyberBeep } from '../utils/audio';
+import {
+  saveSubmissionToCloud,
+  subscribeToSubmissions,
+  updateSubmissionInCloud,
+  deleteSubmissionFromCloud,
+} from '../services/firebase';
 
 interface THCSExamViewProps {
   initialGrade?: GradeLevel;
@@ -64,6 +76,7 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
 
   // Submitted result state for student
   const [submittedResult, setSubmittedResult] = useState<StudentSubmission | null>(null);
+  const [studentReviewTab, setStudentReviewTab] = useState<'all' | 'mc' | 'essay' | 'wrong'>('all');
 
   // Teacher State
   const [isTeacherAuthenticated, setIsTeacherAuthenticated] = useState(false);
@@ -80,6 +93,9 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
   const [filterGrade, setFilterGrade] = useState<'ALL' | GradeLevel>('ALL');
   const [filterClass, setFilterClass] = useState('ALL');
   const [searchStudent, setSearchStudent] = useState('');
+
+  // Live Cloud Connection State
+  const [isCloudConnected, setIsCloudConnected] = useState(true);
 
   // Update default student class when grade changes
   useEffect(() => {
@@ -104,7 +120,24 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
   };
 
   useEffect(() => {
+    // 1. Initial load from local cache
     loadSubmissions();
+
+    // 2. Real-time Cloud Firestore subscription across all devices
+    const unsubscribe = subscribeToSubmissions(
+      (liveSubmissions) => {
+        setSubmissions(liveSubmissions);
+        setIsCloudConnected(true);
+      },
+      (err) => {
+        console.warn('Real-time sync issue, fallback to local', err);
+        setIsCloudConnected(false);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   // Timer for student exam
@@ -217,20 +250,16 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
       status: 'submitted',
     };
 
-    // Save to localStorage
-    try {
-      const currentList: StudentSubmission[] = JSON.parse(
-        localStorage.getItem(EXAM_STORAGE_KEY) || '[]'
-      );
-      const updatedList = [newSubmission, ...currentList];
-      localStorage.setItem(EXAM_STORAGE_KEY, JSON.stringify(updatedList));
-      setSubmissions(updatedList);
-    } catch (err) {
-      console.error('Failed to save submission', err);
-    }
+    // Save to Cloud Firestore & LocalStorage for multi-device sync
+    saveSubmissionToCloud(newSubmission)
+      .then(() => setIsCloudConnected(true))
+      .catch((err) => {
+        console.warn('Saved locally, cloud sync pending:', err);
+      });
 
     playLaserChirp();
     setSubmittedResult(newSubmission);
+    setStudentReviewTab('all');
   };
 
   // Teacher Authentication
@@ -272,9 +301,18 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
 
     localStorage.setItem(EXAM_STORAGE_KEY, JSON.stringify(updatedList));
     setSubmissions(updatedList);
+
+    // Sync to Firestore Cloud Database
+    updateSubmissionInCloud(selectedSubmission.id, {
+      teacherEssayScores: gradingEssayScores,
+      teacherFeedback: gradingFeedback,
+      finalScore,
+      status: 'graded',
+    }).catch((err) => console.warn('Cloud update fallback to local', err));
+
     setSelectedSubmission(null);
     playSuccessChirp();
-    alert('Đã lưu kết quả chấm điểm và nhận xét của Thầy Tài thành công!');
+    alert('Đã lưu kết quả chấm điểm và nhận xét của TỔ STEM FSCBN thành công!');
   };
 
   // Delete submission
@@ -283,6 +321,12 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
       const updated = submissions.filter((s) => s.id !== id);
       localStorage.setItem(EXAM_STORAGE_KEY, JSON.stringify(updated));
       setSubmissions(updated);
+
+      // Sync delete to Firestore Cloud Database
+      deleteSubmissionFromCloud(id).catch((err) =>
+        console.warn('Cloud delete fallback to local', err)
+      );
+
       playCyberBeep(400, 'square', 0.05);
     }
   };
@@ -348,16 +392,21 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
               <Award className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="px-2 py-0.5 rounded text-[10px] font-cyber font-semibold bg-cyan-950 text-cyan-300 border border-cyan-800">
                   CÔNG NGHỆ THCS
                 </span>
-                <h1 className="font-cyber font-bold text-lg sm:text-xl text-slate-100 tracking-wide">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-cyber font-medium bg-emerald-950/90 text-emerald-300 border border-emerald-600/80 flex items-center gap-1 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                  <Cloud className="w-3 h-3 text-emerald-400" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>ĐỒNG BỘ ĐÁM MÂY LIÊN MÁY TỨC THÌ</span>
+                </span>
+                <h1 className="font-cyber font-bold text-lg sm:text-xl text-slate-100 tracking-wide w-full sm:w-auto">
                   HỆ THỐNG ÔN THI &amp; KIỂM TRA ĐÁNH GIÁ (LỚP 6 · 7 · 8 · 9)
                 </h1>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Ngân hàng đề ôn tập chuẩn sách Kết Nối Tri Thức · Tự động chấm điểm trắc nghiệm &amp; nộp bài cho Thầy Tài
+                Ngân hàng đề ôn tập chuẩn sách Kết Nối Tri Thức · Tự động chấm điểm trắc nghiệm &amp; nộp bài lên Đám mây cho TỔ STEM FSCBN
               </p>
             </div>
           </div>
@@ -751,198 +800,520 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
                     className="px-8 py-3 rounded-xl bg-gradient-to-r from-cyan-400 via-emerald-400 to-cyan-400 hover:brightness-110 text-slate-950 font-cyber font-bold text-sm tracking-wider shadow-[0_0_25px_rgba(6,182,212,0.5)] transition-all cursor-pointer inline-flex items-center gap-2"
                   >
                     <Send className="w-4 h-4" />
-                    HOÀN THÀNH &amp; NỘP BÀI THI CHO THẦY TÀI
+                    HOÀN THÀNH &amp; NỘP BÀI THI CHO TỔ STEM FSCBN
                   </button>
                 </div>
               </div>
             )}
 
             {/* Step 3: Student View Submitted Result & Detailed Feedback */}
-            {submittedResult && (
-              <div className="space-y-6 animate-fadeIn">
-                {/* Result Hero Banner */}
-                <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-slate-950 via-cyan-950/60 to-slate-950 border border-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.3)] text-center space-y-4">
-                  <div className="inline-flex p-3 rounded-full bg-cyan-950 border border-cyan-400 text-cyan-300">
-                    <CheckCircle2 className="w-10 h-10 animate-bounce" />
-                  </div>
-                  <div>
-                    <h2 className="font-cyber font-bold text-2xl text-slate-100">
-                      BÀI THI LỚP {submittedResult.grade} ĐÃ NỘP THÀNH CÔNG!
-                    </h2>
-                    <p className="text-xs text-slate-400 mt-1">
-                      Thí sinh: <strong className="text-cyan-300">{submittedResult.studentName}</strong>{' '}
-                      <span className="text-amber-300 font-mono text-xs">
-                        (@{submittedResult.nickname || 'cute student'})
-                      </span>{' '}
-                      | Lớp: <strong className="text-cyan-300">{submittedResult.studentClass}</strong> | Thời gian làm bài:{' '}
-                      <span className="font-mono text-amber-300">{submittedResult.durationMinutes} phút</span>
-                    </p>
-                  </div>
+            {submittedResult && (() => {
+              const wrongCount = currentExam.multipleChoice.filter(
+                (q) => submittedResult.multipleChoiceAnswers[q.id] !== q.correctAnswer
+              ).length;
+              const mcScore = submittedResult.mcScoreOn10;
+              const ratingText =
+                mcScore >= 9
+                  ? 'Xuất sắc ⭐⭐⭐'
+                  : mcScore >= 8
+                  ? 'Giỏi ⭐⭐'
+                  : mcScore >= 6.5
+                  ? 'Khá ⭐'
+                  : mcScore >= 5
+                  ? 'Đạt trung bình'
+                  : 'Cần cố gắng ôn thêm';
 
-                  {/* Score Badges */}
-                  <div className="flex flex-wrap items-center justify-center gap-4 py-2">
-                    <div className="px-6 py-3 rounded-2xl bg-slate-900/90 border border-cyan-500/60 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
-                      <div className="text-[11px] font-cyber text-slate-400 uppercase">
-                        KẾT QUẢ TRẮC NGHIỆM
+              const mcScoreBadgeColor =
+                mcScore >= 8
+                  ? 'text-emerald-400 border-emerald-500/60 bg-emerald-950/30'
+                  : mcScore >= 5
+                  ? 'text-cyan-400 border-cyan-500/60 bg-cyan-950/30'
+                  : 'text-amber-400 border-amber-500/60 bg-amber-950/30';
+
+              const displayedMCQuestions =
+                studentReviewTab === 'wrong'
+                  ? currentExam.multipleChoice.filter(
+                      (q) => submittedResult.multipleChoiceAnswers[q.id] !== q.correctAnswer
+                    )
+                  : currentExam.multipleChoice;
+
+              return (
+                <div className="space-y-6 animate-fadeIn">
+                  {/* Result Hero Banner */}
+                  <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-slate-950 via-cyan-950/60 to-slate-950 border border-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.3)] text-center space-y-4">
+                    <div className="inline-flex p-3 rounded-full bg-cyan-950 border border-cyan-400 text-cyan-300">
+                      <CheckCircle2 className="w-10 h-10 animate-bounce" />
+                    </div>
+                    <div>
+                      <h2 className="font-cyber font-bold text-2xl sm:text-3xl text-slate-100">
+                        BÀI THI CÔNG NGHỆ {submittedResult.grade} ĐÃ NỘP THÀNH CÔNG!
+                      </h2>
+                      <p className="text-xs sm:text-sm text-slate-300 mt-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+                        <span>
+                          Thí sinh: <strong className="text-cyan-300">{submittedResult.studentName}</strong>
+                        </span>
+                        <span className="text-amber-300 font-mono">
+                          (@{submittedResult.nickname || 'cute student'})
+                        </span>
+                        <span className="text-slate-600">|</span>
+                        <span>
+                          Lớp: <strong className="text-cyan-300">{submittedResult.studentClass}</strong>
+                        </span>
+                        <span className="text-slate-600">|</span>
+                        <span>
+                          Thời gian nộp: <span className="font-mono text-slate-300">{submittedResult.submittedAt}</span>
+                        </span>
+                        <span className="text-slate-600">|</span>
+                        <span>
+                          Thời gian làm: <span className="font-mono text-amber-300">{submittedResult.durationMinutes} phút</span>
+                        </span>
+                      </p>
+                    </div>
+
+                    {/* Score Badges */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-2 max-w-3xl mx-auto">
+                      <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-cyan-500/60 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+                        <div className="text-[10px] font-cyber text-slate-400 uppercase">
+                          KẾT QUẢ TRẮC NGHIỆM
+                        </div>
+                        <div className="text-xl sm:text-2xl font-cyber font-bold text-cyan-300 mt-0.5">
+                          {submittedResult.correctCount} / {submittedResult.totalMC} CÂU
+                        </div>
+                        <div className="text-[10px] font-mono text-cyan-400 mt-0.5">
+                          Đúng {Math.round((submittedResult.correctCount / submittedResult.totalMC) * 100)}%
+                        </div>
                       </div>
-                      <div className="text-2xl sm:text-3xl font-cyber font-bold text-cyan-300 mt-0.5">
-                        {submittedResult.correctCount} / {submittedResult.totalMC} CÂU
+
+                      <div className={`p-3.5 rounded-2xl border shadow-[0_0_15px_rgba(16,185,129,0.2)] ${mcScoreBadgeColor}`}>
+                        <div className="text-[10px] font-cyber text-slate-400 uppercase">
+                          ĐIỂM TRẮC NGHIỆM
+                        </div>
+                        <div className="text-xl sm:text-2xl font-cyber font-bold mt-0.5">
+                          {submittedResult.mcScoreOn10} / 10 ĐIỂM
+                        </div>
+                        <div className="text-[10px] font-mono opacity-80 mt-0.5">
+                          Hệ 10 tự động chấm
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 rounded-2xl bg-purple-950/40 border border-purple-500/60 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
+                        <div className="text-[10px] font-cyber text-slate-400 uppercase">
+                          PHẦN TỰ LUẬN
+                        </div>
+                        <div className="text-xl sm:text-2xl font-cyber font-bold text-purple-300 mt-0.5">
+                          {currentExam.essay.length} CÂU HỎI
+                        </div>
+                        <div className="text-[10px] font-mono text-purple-300 mt-0.5">
+                          Đã lưu &amp; có gợi ý chuẩn
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-amber-500/60 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                        <div className="text-[10px] font-cyber text-slate-400 uppercase">
+                          XẾP LOẠI NHANH
+                        </div>
+                        <div className="text-sm sm:text-base font-cyber font-bold text-amber-300 mt-1">
+                          {ratingText}
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-400 mt-0.5">
+                          {wrongCount === 0 ? 'Tuyệt đối 100%' : `Sai ${wrongCount} câu TN`}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="px-6 py-3 rounded-2xl bg-slate-900/90 border border-emerald-500/60 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
-                      <div className="text-[11px] font-cyber text-slate-400 uppercase">
-                        ĐIỂM TRẮC NGHIỆM (HỆ 10)
-                      </div>
-                      <div className="text-2xl sm:text-3xl font-cyber font-bold text-emerald-400 mt-0.5">
-                        {submittedResult.mcScoreOn10} / 10 ĐIỂM
-                      </div>
+                    <div className="p-4 rounded-xl bg-slate-900/80 border border-cyan-800/60 text-xs text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                      <p>
+                        📢 Bài làm phần tự luận của em đã được chuyển đến hệ thống của{' '}
+                        <strong className="text-cyan-300">TỔ STEM FSCBN</strong> để chấm điểm và nhận xét chi tiết.
+                        Em hãy đối chiếu bài làm với <strong>ĐÁP ÁN TRẮC NGHIỆM</strong> và{' '}
+                        <strong>GỢI Ý ĐÁP ÁN TỰ LUẬN</strong> chi tiết bên dưới để ôn tập và củng cố kiến thức!
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+                      <button
+                        onClick={() => {
+                          setExamStarted(false);
+                          setSubmittedResult(null);
+                          setMcAnswers({});
+                          setEssayAnswers({});
+                        }}
+                        className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-cyber font-bold text-xs shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all cursor-pointer inline-flex items-center gap-2"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Làm bài thi ôn tập lượt mới
+                      </button>
+
+                      <button
+                        onClick={() => window.print()}
+                        className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-cyber border border-slate-700 transition-colors cursor-pointer inline-flex items-center gap-2"
+                      >
+                        <Printer className="w-4 h-4 text-cyan-400" />
+                        In / Lưu bảng kết quả bài làm (PDF)
+                      </button>
                     </div>
                   </div>
 
-                  <p className="text-xs text-slate-300 max-w-lg mx-auto">
-                    Bài làm phần tự luận của em đã được chuyển đến hệ thống của <strong>Thầy Tài</strong> để chấm điểm và nhận xét chi tiết. Em có thể đối chiếu bài làm với đáp án chuẩn bên dưới.
-                  </p>
+                  {/* Review Navigation Sub-Tabs */}
+                  <div className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2 text-xs font-cyber text-slate-400">
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      <span>CHẾ ĐỘ XEM ĐÁP ÁN &amp; GỢI Ý:</span>
+                    </div>
 
-                  <button
-                    onClick={() => {
-                      setExamStarted(false);
-                      setSubmittedResult(null);
-                      setMcAnswers({});
-                      setEssayAnswers({});
-                    }}
-                    className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-cyber border border-slate-700 transition-colors cursor-pointer inline-flex items-center gap-2"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    Làm bài thi ôn tập lượt mới
-                  </button>
-                </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        onClick={() => setStudentReviewTab('all')}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-cyber transition-all cursor-pointer flex items-center gap-1.5 ${
+                          studentReviewTab === 'all'
+                            ? 'bg-cyan-950 text-cyan-300 border border-cyan-400 font-bold shadow-[0_0_10px_rgba(6,182,212,0.3)]'
+                            : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                        }`}
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>Tất cả (Trắc nghiệm &amp; Tự luận)</span>
+                      </button>
 
-                {/* Review MC Questions */}
-                <div className="space-y-4">
-                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
-                    <h3 className="font-cyber font-bold text-sm text-cyan-300 flex items-center gap-2">
-                      <HelpCircle className="w-4 h-4 text-cyan-400" />
-                      CHI TIẾT ĐÁP ÁN TRẮC NGHIỆM (ĐỐI CHIẾU KẾT QUẢ)
-                    </h3>
-                  </div>
+                      <button
+                        onClick={() => setStudentReviewTab('mc')}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-cyber transition-all cursor-pointer flex items-center gap-1.5 ${
+                          studentReviewTab === 'mc'
+                            ? 'bg-cyan-950 text-cyan-300 border border-cyan-400 font-bold shadow-[0_0_10px_rgba(6,182,212,0.3)]'
+                            : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                        }`}
+                      >
+                        <HelpCircle className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Đáp án Trắc nghiệm ({submittedResult.totalMC} câu)</span>
+                      </button>
 
-                  <div className="space-y-3">
-                    {currentExam.multipleChoice.map((q) => {
-                      const userChoice = submittedResult.multipleChoiceAnswers[q.id];
-                      const isCorrect = userChoice === q.correctAnswer;
-                      return (
-                        <div
-                          key={q.id}
-                          className={`p-4 rounded-xl border text-xs sm:text-sm ${
-                            isCorrect
-                              ? 'bg-emerald-950/20 border-emerald-500/40'
-                              : 'bg-rose-950/20 border-rose-500/40'
+                      <button
+                        onClick={() => setStudentReviewTab('essay')}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-cyber transition-all cursor-pointer flex items-center gap-1.5 ${
+                          studentReviewTab === 'essay'
+                            ? 'bg-purple-950 text-purple-300 border border-purple-400 font-bold shadow-[0_0_10px_rgba(168,85,247,0.3)]'
+                            : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                        }`}
+                      >
+                        <BookOpen className="w-3.5 h-3.5 text-purple-400" />
+                        <span>Gợi ý Tự luận ({currentExam.essay.length} câu)</span>
+                      </button>
+
+                      {wrongCount > 0 && (
+                        <button
+                          onClick={() => setStudentReviewTab('wrong')}
+                          className={`px-3.5 py-1.5 rounded-xl text-xs font-cyber transition-all cursor-pointer flex items-center gap-1.5 ${
+                            studentReviewTab === 'wrong'
+                              ? 'bg-rose-950 text-rose-300 border border-rose-400 font-bold shadow-[0_0_10px_rgba(244,63,94,0.3)]'
+                              : 'bg-slate-950 text-rose-400 hover:bg-rose-950/40 border border-rose-900/40'
                           }`}
                         >
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <div className="font-semibold text-slate-100 flex items-start gap-2">
-                              <span className="font-mono text-cyan-400 font-bold shrink-0">
-                                Câu {q.id}:
-                              </span>
-                              <span>{q.question}</span>
-                            </div>
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-mono shrink-0 font-bold ${
-                                isCorrect
-                                  ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                                  : 'bg-rose-950 text-rose-300 border border-rose-800'
-                              }`}
-                            >
-                              {isCorrect ? '✓ ĐÚNG' : '✗ SAI'}
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mt-2 font-sans">
-                            {q.options.map((opt) => {
-                              const isUserPick = userChoice === opt.key;
-                              const isCorrectAnswer = q.correctAnswer === opt.key;
-                              return (
-                                <div
-                                  key={opt.key}
-                                  className={`p-2 rounded-lg flex items-center gap-2 ${
-                                    isCorrectAnswer
-                                      ? 'bg-emerald-950/80 text-emerald-200 border border-emerald-500/60 font-semibold'
-                                      : isUserPick
-                                      ? 'bg-rose-950/80 text-rose-200 border border-rose-500/60 font-semibold'
-                                      : 'bg-slate-950/60 text-slate-400'
-                                  }`}
-                                >
-                                  <span className="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center font-mono text-[10px] shrink-0">
-                                    {opt.key}
-                                  </span>
-                                  <span>{opt.text}</span>
-                                  {isCorrectAnswer && (
-                                    <span className="ml-auto text-[10px] text-emerald-300">
-                                      (Đáp án đúng)
-                                    </span>
-                                  )}
-                                  {!isCorrect && isUserPick && (
-                                    <span className="ml-auto text-[10px] text-rose-300">
-                                      (Em đã chọn)
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Review Essay Questions with Suggested Answers */}
-                <div className="space-y-4">
-                  <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-800 flex items-center justify-between">
-                    <h3 className="font-cyber font-bold text-sm text-purple-300 flex items-center gap-2">
-                      <BookOpen className="w-4 h-4 text-purple-400" />
-                      ĐÁP ÁN CHUẨN PHẦN TỰ LUẬN (HƯỚNG DẪN CỦA TỔ STEM FSCBN)
-                    </h3>
+                          <XCircle className="w-3.5 h-3.5" />
+                          <span>Xem câu làm sai ({wrongCount} câu)</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="space-y-4">
-                    {currentExam.essay.map((q) => (
-                      <div
-                        key={q.id}
-                        className="p-5 rounded-2xl bg-slate-900/80 border border-purple-900/50 space-y-3"
-                      >
-                        <div className="font-cyber font-bold text-sm text-purple-200">
-                          Câu {q.id}. {q.question}
-                        </div>
-
-                        {/* Student's answer */}
-                        <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
-                          <div className="text-[11px] font-cyber text-slate-400">
-                            Bài làm của em:
-                          </div>
-                          <p className="text-xs sm:text-sm text-slate-200 whitespace-pre-line leading-relaxed">
-                            {submittedResult.essayAnswers[q.id] || '(Em chưa ghi câu trả lời)'}
+                  {/* ========================================================== */}
+                  {/* PART 1 REVIEW: MULTIPLE CHOICE QUESTIONS                  */}
+                  {/* ========================================================== */}
+                  {(studentReviewTab === 'all' ||
+                    studentReviewTab === 'mc' ||
+                    studentReviewTab === 'wrong') && (
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-xl bg-gradient-to-r from-slate-950 via-cyan-950/40 to-slate-950 border border-cyan-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                          <h3 className="font-cyber font-bold text-sm sm:text-base text-cyan-300 flex items-center gap-2">
+                            <HelpCircle className="w-5 h-5 text-cyan-400" />
+                            ĐÁP ÁN CHI TIẾT PHẦN TRẮC NGHIỆM ({displayedMCQuestions.length} CÂU)
+                          </h3>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            {studentReviewTab === 'wrong'
+                              ? `Đang lọc danh sách ${displayedMCQuestions.length} câu em làm chưa đúng để rút kinh nghiệm.`
+                              : `Đối chiếu kết quả: Đúng ${submittedResult.correctCount} câu · Sai ${wrongCount} câu.`}
                           </p>
                         </div>
 
-                        {/* Standard suggested answer */}
-                        <div className="p-3.5 rounded-xl bg-purple-950/30 border border-purple-800/40 space-y-1.5">
-                          <div className="text-xs font-cyber font-bold text-purple-300 flex items-center gap-1.5">
-                            <Sparkles className="w-3.5 h-3.5 text-purple-400" /> Đáp án chuẩn / Hướng dẫn chấm:
-                          </div>
-                          <ul className="text-xs sm:text-sm text-purple-200 space-y-1 list-disc pl-4 leading-relaxed font-sans">
-                            {q.suggestedAnswer.map((line, idx) => (
-                              <li key={idx}>{line}</li>
-                            ))}
-                          </ul>
+                        {/* Legend */}
+                        <div className="flex flex-wrap items-center gap-3 text-[11px] font-cyber">
+                          <span className="flex items-center gap-1.5 text-emerald-400">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Đáp án đúng
+                          </span>
+                          <span className="flex items-center gap-1.5 text-rose-400">
+                            <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Em chọn (Sai)
+                          </span>
                         </div>
                       </div>
-                    ))}
-                  </div>
+
+                      <div className="space-y-3.5">
+                        {displayedMCQuestions.map((q) => {
+                          const userChoice = submittedResult.multipleChoiceAnswers[q.id];
+                          const isCorrect = userChoice === q.correctAnswer;
+                          const hasAnswered = !!userChoice;
+                          const correctOptObj = q.options.find((o) => o.key === q.correctAnswer);
+
+                          return (
+                            <div
+                              key={q.id}
+                              className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                                isCorrect
+                                  ? 'bg-emerald-950/15 border-emerald-500/40'
+                                  : 'bg-rose-950/20 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.1)]'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-3 mb-3">
+                                <div className="font-semibold text-slate-100 flex items-start gap-2.5 text-sm sm:text-base">
+                                  <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 font-mono text-cyan-400 font-bold shrink-0 text-xs">
+                                    Câu {q.id}
+                                  </span>
+                                  <span className="leading-snug">{q.question}</span>
+                                </div>
+
+                                <div className="shrink-0">
+                                  {isCorrect ? (
+                                    <span className="px-3 py-1 rounded-full text-xs font-cyber font-bold bg-emerald-950 text-emerald-300 border border-emerald-700 flex items-center gap-1">
+                                      <Check className="w-3.5 h-3.5" /> ĐÚNG (+{(10 / submittedResult.totalMC).toFixed(2)}đ)
+                                    </span>
+                                  ) : hasAnswered ? (
+                                    <span className="px-3 py-1 rounded-full text-xs font-cyber font-bold bg-rose-950 text-rose-300 border border-rose-700 flex items-center gap-1">
+                                      <X className="w-3.5 h-3.5" /> CHƯA ĐÚNG (0đ)
+                                    </span>
+                                  ) : (
+                                    <span className="px-3 py-1 rounded-full text-xs font-cyber font-bold bg-amber-950 text-amber-300 border border-amber-700 flex items-center gap-1">
+                                      <AlertCircle className="w-3.5 h-3.5" /> CHƯA CHỌN (0đ)
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* 4 Options */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs sm:text-sm font-sans">
+                                {q.options.map((opt) => {
+                                  const isUserPick = userChoice === opt.key;
+                                  const isCorrectAnswer = q.correctAnswer === opt.key;
+
+                                  let optStyles = 'bg-slate-950/60 text-slate-400 border-slate-800/80';
+                                  if (isCorrectAnswer) {
+                                    optStyles =
+                                      'bg-emerald-950/80 text-emerald-100 border-emerald-500/80 font-medium shadow-[0_0_12px_rgba(16,185,129,0.25)]';
+                                  } else if (isUserPick && !isCorrect) {
+                                    optStyles =
+                                      'bg-rose-950/80 text-rose-100 border-rose-500/80 font-medium shadow-[0_0_12px_rgba(244,63,94,0.25)]';
+                                  }
+
+                                  return (
+                                    <div
+                                      key={opt.key}
+                                      className={`p-3 rounded-xl border flex items-start gap-2.5 transition-all ${optStyles}`}
+                                    >
+                                      <span
+                                        className={`w-5 h-5 rounded-full flex items-center justify-center font-mono text-xs font-bold shrink-0 mt-0.5 ${
+                                          isCorrectAnswer
+                                            ? 'bg-emerald-400 text-slate-950'
+                                            : isUserPick
+                                            ? 'bg-rose-500 text-slate-950'
+                                            : 'bg-slate-800 text-slate-400'
+                                        }`}
+                                      >
+                                        {opt.key}
+                                      </span>
+
+                                      <div className="flex-1 leading-relaxed">
+                                        <span>{opt.text}</span>
+                                      </div>
+
+                                      {/* Badges on the right */}
+                                      {isCorrectAnswer && (
+                                        <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-cyber font-bold bg-emerald-900 text-emerald-200 border border-emerald-600">
+                                          ✓ Đáp án đúng
+                                        </span>
+                                      )}
+                                      {!isCorrect && isUserPick && (
+                                        <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-cyber font-bold bg-rose-900 text-rose-200 border border-rose-600">
+                                          ✗ Em đã chọn
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Question Summary Review Bar */}
+                              <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                                {!isCorrect ? (
+                                  <div className="text-amber-300 font-sans flex items-center gap-1.5">
+                                    <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                                    <span>
+                                      <strong>Ghi nhớ:</strong> Em chọn{' '}
+                                      <span className="font-mono font-bold text-rose-300">[{userChoice || 'Chưa chọn'}]</span>,{' '}
+                                      đáp án chuẩn là{' '}
+                                      <span className="font-mono font-bold text-emerald-300">
+                                        [{q.correctAnswer}] {correctOptObj?.text}
+                                      </span>
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="text-emerald-400 font-sans flex items-center gap-1.5">
+                                    <Check className="w-4 h-4 shrink-0" />
+                                    <span>Xuất sắc! Em đã chọn chính xác đáp án [{q.correctAnswer}].</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ========================================================== */}
+                  {/* PART 2 REVIEW: ESSAY QUESTIONS & SUGGESTED ANSWERS        */}
+                  {/* ========================================================== */}
+                  {(studentReviewTab === 'all' || studentReviewTab === 'essay') && (
+                    <div className="space-y-4 pt-2">
+                      <div className="p-4 rounded-xl bg-gradient-to-r from-purple-950/60 via-slate-950 to-purple-950/60 border border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.2)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-cyber font-bold bg-purple-950 text-purple-300 border border-purple-700">
+                              HƯỚNG DẪN CHUẨN
+                            </span>
+                            <h3 className="font-cyber font-bold text-sm sm:text-base text-purple-200 flex items-center gap-2">
+                              <BookOpen className="w-5 h-5 text-purple-400" />
+                              GỢI Ý ĐÁP ÁN TỰ LUẬN TRỌNG TÂM CÔNG NGHỆ {submittedResult.grade}
+                            </h3>
+                          </div>
+                          <p className="text-xs text-slate-300 mt-1">
+                            TỔ STEM FSCBN cung cấp hướng dẫn chấm và đáp án chuẩn để học sinh đối chiếu bài viết của mình.
+                          </p>
+                        </div>
+
+                        <span className="px-3 py-1 rounded-xl text-xs font-cyber font-bold bg-purple-900/80 text-purple-200 border border-purple-600 shrink-0 self-start sm:self-auto">
+                          {currentExam.essay.length} CÂU TỰ LUẬN
+                        </span>
+                      </div>
+
+                      <div className="space-y-5">
+                        {currentExam.essay.map((q) => (
+                          <div
+                            key={q.id}
+                            className="p-5 sm:p-6 rounded-2xl bg-slate-900/90 border border-purple-900/60 shadow-[0_0_20px_rgba(168,85,247,0.12)] space-y-4"
+                          >
+                            {/* Question Title */}
+                            <div className="flex items-start gap-3">
+                              <span className="px-3 py-1 rounded-xl bg-purple-950 border border-purple-700 text-purple-300 font-cyber text-xs font-bold shrink-0">
+                                CÂU {q.id} (TỰ LUẬN)
+                              </span>
+                              <h4 className="font-sans text-sm sm:text-base font-bold text-slate-100 leading-snug">
+                                {q.question}
+                              </h4>
+                            </div>
+
+                            {/* Two-block comparison: Student Answer & Suggested Answer */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                              {/* Left / Block 1: Student's Actual Answer */}
+                              <div className="p-4 rounded-xl bg-slate-950/90 border border-slate-800 space-y-2 flex flex-col justify-between">
+                                <div>
+                                  <div className="text-[11px] font-cyber font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-2 pb-1.5 border-b border-slate-800">
+                                    <span>✍️ BÀI LÀM CỦA THÍ SINH:</span>
+                                    <span className="text-cyan-300 font-bold">{submittedResult.studentName}</span>
+                                  </div>
+                                  <p className="text-xs sm:text-sm text-slate-200 whitespace-pre-line leading-relaxed font-sans">
+                                    {submittedResult.essayAnswers[q.id]?.trim() ? (
+                                      submittedResult.essayAnswers[q.id]
+                                    ) : (
+                                      <span className="italic text-slate-500">
+                                        (Em chưa nhập câu trả lời cho câu hỏi này khi làm bài)
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+
+                                <div className="text-[11px] font-mono text-slate-500 pt-2 border-t border-slate-900 flex items-center justify-between">
+                                  <span>Trạng thái: Đã gửi giáo viên</span>
+                                  <span>Độ dài: {submittedResult.essayAnswers[q.id]?.length || 0} ký tự</span>
+                                </div>
+                              </div>
+
+                              {/* Right / Block 2: Standard Suggested Answer from TỔ STEM FSCBN */}
+                              <div className="p-4 sm:p-5 rounded-xl bg-gradient-to-br from-purple-950/40 via-slate-950 to-purple-950/20 border border-purple-500/60 shadow-[0_0_15px_rgba(168,85,247,0.15)] space-y-2.5">
+                                <div className="text-xs font-cyber font-bold text-purple-300 flex items-center justify-between pb-2 border-b border-purple-900/50">
+                                  <span className="flex items-center gap-1.5">
+                                    <Sparkles className="w-4 h-4 text-amber-400" />
+                                    GỢI Ý ĐÁP ÁN CHUẨN (TỔ STEM FSCBN)
+                                  </span>
+                                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-purple-900 text-purple-200 border border-purple-700">
+                                    Thang chuẩn
+                                  </span>
+                                </div>
+
+                                <div className="text-xs sm:text-sm text-purple-100 space-y-2 font-sans leading-relaxed">
+                                  {q.suggestedAnswer.map((line, idx) => {
+                                    const isSubBullet =
+                                      line.startsWith('•') ||
+                                      line.startsWith('-') ||
+                                      line.startsWith('+');
+                                    const isArrow = line.startsWith('👉');
+                                    const isStep =
+                                      line.startsWith('1.') ||
+                                      line.startsWith('2.') ||
+                                      line.startsWith('3.') ||
+                                      line.startsWith('Bước');
+
+                                    if (isArrow) {
+                                      return (
+                                        <div
+                                          key={idx}
+                                          className="p-2 rounded-lg bg-purple-950/60 border border-purple-700/60 text-amber-300 font-semibold flex items-start gap-2"
+                                        >
+                                          <span className="shrink-0">{line}</span>
+                                        </div>
+                                      );
+                                    }
+
+                                    if (isStep) {
+                                      return (
+                                        <div
+                                          key={idx}
+                                          className="font-semibold text-cyan-300 pl-2 border-l-2 border-cyan-500 py-0.5"
+                                        >
+                                          {line}
+                                        </div>
+                                      );
+                                    }
+
+                                    if (isSubBullet) {
+                                      return (
+                                        <div key={idx} className="pl-3 text-slate-200 flex items-start gap-2">
+                                          <span className="text-purple-400 font-bold shrink-0">▸</span>
+                                          <span>{line.replace(/^[•\-+]\s*/, '')}</span>
+                                        </div>
+                                      );
+                                    }
+
+                                    return (
+                                      <div key={idx} className="font-semibold text-purple-200">
+                                        {line}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+
+                                <div className="mt-3 pt-2 border-t border-purple-900/50 text-[11px] text-slate-400 italic flex items-center gap-1.5">
+                                  <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                  <span>
+                                    Lời khuyên: Đối chiếu các ý chính và từ khóa trong bài làm của em với gợi ý trên để tự đánh giá mức độ hoàn thiện.
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         )}
 
@@ -992,6 +1363,31 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
             ) : (
               // Teacher Workspace
               <div className="space-y-6">
+                {/* Cloud Sync Status Banner */}
+                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/50 via-slate-900 to-cyan-950/50 border border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-xl bg-emerald-950 border border-emerald-600 text-emerald-300">
+                      <Cloud className="w-5 h-5 animate-pulse" />
+                    </div>
+                    <div>
+                      <div className="font-cyber font-bold text-xs sm:text-sm text-emerald-300 flex items-center gap-2">
+                        <span>ĐỒNG BỘ ĐÁM MÂY (FIREBASE REALTIME SYNC)</span>
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                      </div>
+                      <p className="text-[11px] text-slate-300 mt-0.5">
+                        Tất cả bài thi học sinh nộp từ mọi máy tính, máy tính bảng và điện thoại đều tự động đẩy về đây tức thì theo thời gian thực!
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="px-3 py-1 rounded-full text-[11px] font-cyber font-bold bg-emerald-950 text-emerald-300 border border-emerald-600 flex items-center gap-1.5">
+                      <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>KẾT NỐI TRỰC TUYẾN</span>
+                    </span>
+                  </div>
+                </div>
+
                 {/* Stats & Action Toolbar for All 4 Grades */}
                 <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5">
                   <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
@@ -1297,6 +1693,18 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
                                 {selectedSubmission.essayAnswers[q.id] || '(Học sinh để trống)'}
                               </div>
 
+                              {/* Standard suggested answer for teacher reference */}
+                              <div className="p-3 rounded-lg bg-purple-950/30 border border-purple-800/40 text-xs text-purple-200 space-y-1">
+                                <span className="text-[10px] font-cyber font-bold text-purple-300 block mb-1 flex items-center gap-1.5">
+                                  <Sparkles className="w-3 h-3 text-purple-400" /> Gợi ý đáp án chuẩn của TỔ STEM FSCBN:
+                                </span>
+                                <ul className="list-disc pl-4 space-y-0.5 text-xs text-purple-200 font-sans">
+                                  {q.suggestedAnswer.map((line, idx) => (
+                                    <li key={idx}>{line}</li>
+                                  ))}
+                                </ul>
+                              </div>
+
                               <div className="flex items-center gap-3 pt-1">
                                 <span className="text-xs font-cyber text-purple-300">
                                   Điểm câu {q.id}:
@@ -1324,7 +1732,7 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
                         {/* Teacher Feedback Note */}
                         <div className="space-y-1.5">
                           <label className="block text-xs font-cyber text-slate-300">
-                            LỜI NHẬN XÉT CỦA THẦY TÀI DÀNH CHO HỌC SINH:
+                            LỜI NHẬN XÉT CỦA TỔ STEM FSCBN DÀNH CHO HỌC SINH:
                           </label>
                           <textarea
                             rows={3}
