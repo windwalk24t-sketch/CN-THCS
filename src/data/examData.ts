@@ -1207,7 +1207,7 @@ export const GRADE_7_EXAM: GradeExamSet = {
         { key: 'C', text: '3' },
         { key: 'D', text: '4' },
       ],
-      correctAnswer: 'D',
+      correctAnswer: 'C',
     },
     {
       id: 10,
