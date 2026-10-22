@@ -218,11 +218,16 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
   const handleSubmitExam = () => {
     const answeredCount = Object.keys(mcAnswers).length;
     const totalMC = currentExam.multipleChoice.length;
+    const answeredEssayCount = Object.values(essayAnswers).filter((t) => t && t.trim().length > 0).length;
+    const totalEssay = currentExam.essay.length;
 
     const nickLabel = studentNickname.trim() ? ` (${studentNickname.trim()})` : '';
     let confirmMsg = `Thí sinh ${studentName}${nickLabel} - Lớp ${studentClass} (Khối ${selectedGrade}) có chắc chắn muốn nộp bài?`;
     if (answeredCount < totalMC) {
-      confirmMsg += `\nLưu ý: Bạn mới hoàn thành ${answeredCount}/${totalMC} câu trắc nghiệm!`;
+      confirmMsg += `\n⚠️ Trắc nghiệm: Em mới làm ${answeredCount}/${totalMC} câu!`;
+    }
+    if (answeredEssayCount < totalEssay) {
+      confirmMsg += `\n⚠️ Tự luận: Em mới làm ${answeredEssayCount}/${totalEssay} câu (còn ${totalEssay - answeredEssayCount} câu tự luận chưa làm)!`;
     }
 
     if (!window.confirm(confirmMsg)) {
@@ -639,12 +644,20 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <div className="text-xs font-mono text-slate-300">
-                      Đã làm:{' '}
-                      <span className="text-cyan-400 font-bold">
-                        {Object.keys(mcAnswers).length}/{currentExam.multipleChoice.length}
-                      </span>{' '}
-                      câu TN
+                    <div className="text-xs font-mono text-slate-300 flex items-center gap-2">
+                      <span>
+                        TN:{' '}
+                        <span className="text-cyan-400 font-bold">
+                          {Object.keys(mcAnswers).length}/{currentExam.multipleChoice.length}
+                        </span>
+                      </span>
+                      <span className="text-slate-600">|</span>
+                      <span>
+                        TL:{' '}
+                        <span className="text-purple-400 font-bold">
+                          {Object.values(essayAnswers).filter((t) => t && t.trim().length > 0).length}/{currentExam.essay.length}
+                        </span>
+                      </span>
                     </div>
 
                     <button
@@ -658,27 +671,60 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
                 </div>
 
                 {/* Quick Navigation Numbers */}
-                <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
-                  <div className="text-xs font-cyber text-slate-400 mb-2">
-                    DANH SÁCH CÂU TRẮC NGHIỆM ({currentExam.multipleChoice.length} CÂU) - BẤM SỐ ĐỂ CHUYỂN NHANH:
+                <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-3">
+                  <div>
+                    <div className="text-xs font-cyber text-slate-400 mb-2">
+                      DANH SÁCH CÂU TRẮC NGHIỆM ({currentExam.multipleChoice.length} CÂU) - BẤM SỐ ĐỂ CHUYỂN NHANH:
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {currentExam.multipleChoice.map((q) => {
+                        const isAnswered = !!mcAnswers[q.id];
+                        return (
+                          <a
+                            key={q.id}
+                            href={`#question-${q.id}`}
+                            className={`w-7 h-7 rounded-lg text-xs font-mono flex items-center justify-center transition-all ${
+                              isAnswered
+                                ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/80 font-bold'
+                                : 'bg-slate-950 text-slate-500 border border-slate-800 hover:text-slate-300'
+                            }`}
+                          >
+                            {q.id}
+                          </a>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {currentExam.multipleChoice.map((q) => {
-                      const isAnswered = !!mcAnswers[q.id];
-                      return (
-                        <a
-                          key={q.id}
-                          href={`#question-${q.id}`}
-                          className={`w-7 h-7 rounded-lg text-xs font-mono flex items-center justify-center transition-all ${
-                            isAnswered
-                              ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/80 font-bold'
-                              : 'bg-slate-950 text-slate-500 border border-slate-800 hover:text-slate-300'
-                          }`}
-                        >
-                          {q.id}
-                        </a>
-                      );
-                    })}
+
+                  {/* Essay Quick Navigation */}
+                  <div className="pt-2 border-t border-slate-800/80">
+                    <div className="text-xs font-cyber text-purple-300 mb-2 flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-purple-400" />
+                      DANH SÁCH CÂU TỰ LUẬN ({currentExam.essay.length} CÂU) - BẤM ĐỂ CHUYỂN NHANH:
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {currentExam.essay.map((q) => {
+                        const isDone = !!essayAnswers[q.id]?.trim();
+                        return (
+                          <a
+                            key={q.id}
+                            href={`#essay-${q.id}`}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-cyber flex items-center gap-2 transition-all ${
+                              isDone
+                                ? 'bg-purple-950 text-purple-200 border border-purple-500 font-bold shadow-[0_0_10px_rgba(168,85,247,0.3)]'
+                                : 'bg-slate-950 text-purple-400/80 border border-purple-900/60 hover:text-purple-200 hover:border-purple-600'
+                            }`}
+                          >
+                            <span>Câu {q.id} TL</span>
+                            <span
+                              className={`w-2 h-2 rounded-full ${
+                                isDone ? 'bg-emerald-400' : 'bg-amber-400/60'
+                              }`}
+                            />
+                          </a>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
@@ -765,34 +811,59 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
                   </div>
 
                   <div className="space-y-4">
-                    {currentExam.essay.map((q) => (
-                      <div
-                        key={q.id}
-                        className="p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-purple-900/40 space-y-2.5"
-                      >
-                        <div className="flex items-start gap-3">
-                          <span className="px-2.5 py-0.5 rounded bg-purple-950 border border-purple-800 text-purple-300 font-mono text-xs font-bold shrink-0">
-                            Câu {q.id} (Tự luận)
-                          </span>
-                          <p className="font-sans text-sm sm:text-base font-semibold text-slate-100">
-                            {q.question}
-                          </p>
-                        </div>
+                    {currentExam.essay.map((q) => {
+                      const isFilled = !!essayAnswers[q.id]?.trim();
+                      return (
+                        <div
+                          key={q.id}
+                          id={`essay-${q.id}`}
+                          className={`p-4 sm:p-5 rounded-2xl bg-slate-900/60 border transition-all space-y-3 ${
+                            isFilled
+                              ? 'border-purple-600/60 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+                              : 'border-purple-900/40'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3">
+                              <span className="px-2.5 py-1 rounded-lg bg-purple-950 border border-purple-700 text-purple-300 font-cyber text-xs font-bold shrink-0">
+                                Câu {q.id} / {currentExam.essay.length} (Tự luận)
+                              </span>
+                              <p className="font-sans text-sm sm:text-base font-semibold text-slate-100 leading-snug">
+                                {q.question}
+                              </p>
+                            </div>
 
-                        <textarea
-                          rows={4}
-                          value={essayAnswers[q.id] || ''}
-                          onChange={(e) =>
-                            setEssayAnswers((prev) => ({
-                              ...prev,
-                              [q.id]: e.target.value,
-                            }))
-                          }
-                          placeholder="Nhập câu trả lời của em tại đây..."
-                          className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 focus:border-purple-400 text-slate-200 text-xs sm:text-sm outline-none transition-colors leading-relaxed"
-                        />
-                      </div>
-                    ))}
+                            <span
+                              className={`shrink-0 px-2 py-0.5 rounded text-[11px] font-cyber font-bold border ${
+                                isFilled
+                                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-600'
+                                  : 'bg-amber-950/80 text-amber-300 border-amber-700'
+                              }`}
+                            >
+                              {isFilled ? '✓ Đã viết bài' : 'Chưa viết'}
+                            </span>
+                          </div>
+
+                          <textarea
+                            rows={4}
+                            value={essayAnswers[q.id] || ''}
+                            onChange={(e) =>
+                              setEssayAnswers((prev) => ({
+                                ...prev,
+                                [q.id]: e.target.value,
+                              }))
+                            }
+                            placeholder="Nhập câu trả lời của em tại đây..."
+                            className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 focus:border-purple-400 text-slate-200 text-xs sm:text-sm outline-none transition-colors leading-relaxed font-sans"
+                          />
+
+                          <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                            <span>Hãy trình bày rõ ràng, đủ ý theo yêu cầu đề bài</span>
+                            <span>{essayAnswers[q.id]?.trim().length || 0} ký tự</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
