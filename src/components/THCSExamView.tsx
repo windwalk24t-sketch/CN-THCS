@@ -35,6 +35,7 @@ import {
   ChevronDown,
   ChevronUp,
   Table,
+  Trophy,
 } from 'lucide-react';
 import { playLaserChirp, playSuccessChirp, playCyberBeep } from '../utils/audio';
 import {
@@ -43,6 +44,7 @@ import {
   updateSubmissionInCloud,
   deleteSubmissionFromCloud,
 } from '../services/firebase';
+import { VisitorLeaderboardView } from './VisitorLeaderboardView';
 
 interface THCSExamViewProps {
   initialGrade?: GradeLevel;
@@ -57,8 +59,8 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
   onSelectGrade,
   onBackToCurriculum,
 }) => {
-  // Mode: student exam vs teacher dashboard
-  const [activeTab, setActiveTab] = useState<'student' | 'teacher'>('student');
+  // Mode: student exam vs visitor leaderboard vs teacher dashboard
+  const [activeTab, setActiveTab] = useState<'student' | 'visitor' | 'teacher'>('student');
 
   // Selected Grade for the exam
   const [selectedGrade, setSelectedGrade] = useState<GradeLevel>(
@@ -446,6 +448,21 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
               >
                 <FileText className="w-3.5 h-3.5" />
                 <span>Học sinh làm bài</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  playCyberBeep(650, 'sine', 0.04);
+                  setActiveTab('visitor');
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-cyber transition-all cursor-pointer flex items-center gap-1.5 ${
+                  activeTab === 'visitor'
+                    ? 'bg-amber-400 text-slate-950 font-bold shadow-[0_0_12px_rgba(251,191,36,0.4)]'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Trophy className="w-3.5 h-3.5" />
+                <span>Khách tham quan</span>
               </button>
 
               <button
@@ -1395,7 +1412,20 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
         )}
 
         {/* ========================================================== */}
-        {/* TAB 2: TEACHER DASHBOARD (taind93)                         */}
+        {/* TAB 2: VISITOR LEADERBOARD & RESULTS (KHÁCH THAM QUAN)     */}
+        {/* ========================================================== */}
+        {activeTab === 'visitor' && (
+          <VisitorLeaderboardView
+            submissions={submissions}
+            isCloudConnected={isCloudConnected}
+            onRefresh={() => {
+              loadSubmissions();
+            }}
+          />
+        )}
+
+        {/* ========================================================== */}
+        {/* TAB 3: TEACHER DASHBOARD (taind93)                         */}
         {/* ========================================================== */}
         {activeTab === 'teacher' && (
           <div className="space-y-6">

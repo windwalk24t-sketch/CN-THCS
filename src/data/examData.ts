@@ -55,6 +55,79 @@ export const isTeacherPasswordValid = (input: string): boolean => {
 export const EXAM_STORAGE_KEY = 'cong_nghe_thcs_exam_submissions_v2';
 
 // ==========================================
+// MỐC DANH HIỆU BẢNG VINH DANH & KHÁCH THAM QUAN
+// ==========================================
+export type RankTier = 'nguyen_soai' | 'tuong_quan' | 'cao_thu' | 'tan_thu';
+
+export interface RankTierInfo {
+  tier: RankTier;
+  title: string;
+  badge: string;
+  shortBadge: string;
+  scoreRange: string;
+  description: string;
+  themeColor: string;
+}
+
+export const RANK_TIER_CONFIG: Record<RankTier, RankTierInfo> = {
+  nguyen_soai: {
+    tier: 'nguyen_soai',
+    title: 'Nguyên soái',
+    badge: '👑 Nguyên soái',
+    shortBadge: '👑 Nguyên soái',
+    scoreRange: '10.0',
+    description: '10 điểm tuyệt đối - Xuất sắc toàn diện',
+    themeColor: 'amber',
+  },
+  tuong_quan: {
+    tier: 'tuong_quan',
+    title: 'Tướng quân',
+    badge: '🎖️ Tướng quân',
+    shortBadge: '🎖️ Tướng quân',
+    scoreRange: '9.0 - 9.9',
+    description: 'Trên 9 dưới 10 điểm - Thủ lĩnh công nghệ',
+    themeColor: 'purple',
+  },
+  cao_thu: {
+    tier: 'cao_thu',
+    title: 'Cao thủ',
+    badge: '⚔️ Cao thủ',
+    shortBadge: '⚔️ Cao thủ',
+    scoreRange: '8.0 - 8.9',
+    description: 'Dưới 9 trên 8 điểm - Nắm vững kiến thức',
+    themeColor: 'cyan',
+  },
+  tan_thu: {
+    tier: 'tan_thu',
+    title: 'Làng tân thủ',
+    badge: '🛡️ Làng tân thủ',
+    shortBadge: '🛡️ Tân thủ',
+    scoreRange: '< 8.0',
+    description: 'Dưới 8 điểm - Bước đệm rèn luyện nâng cao',
+    themeColor: 'emerald',
+  },
+};
+
+export function getSubmissionDisplayScore(sub: StudentSubmission): number {
+  if (typeof sub.finalScore === 'number' && !isNaN(sub.finalScore)) {
+    return sub.finalScore;
+  }
+  if (sub.teacherEssayScores && Object.keys(sub.teacherEssayScores).length > 0) {
+    let totalEssay = 0;
+    Object.values(sub.teacherEssayScores).forEach((s) => (totalEssay += s));
+    return Number((sub.mcScoreOn10 * 0.7 + totalEssay * 0.3).toFixed(2));
+  }
+  return sub.mcScoreOn10;
+}
+
+export function getRankTier(score: number): RankTier {
+  if (score >= 10) return 'nguyen_soai';
+  if (score >= 9) return 'tuong_quan';
+  if (score >= 8) return 'cao_thu';
+  return 'tan_thu';
+}
+
+// ==========================================
 // CÔNG NGHỆ 8 - BỘ ĐỀ ÔN THI TRỌNG TÂM
 // ==========================================
 export const GRADE_8_EXAM: GradeExamSet = {
