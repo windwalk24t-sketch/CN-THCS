@@ -44,6 +44,7 @@ export const VisitorLeaderboardView: React.FC<VisitorLeaderboardViewProps> = ({
 }) => {
   // Filters & Search
   const [selectedGrade, setSelectedGrade] = useState<'ALL' | GradeLevel>('ALL');
+  const [selectedClass, setSelectedClass] = useState<string>('ALL');
   const [selectedTier, setSelectedTier] = useState<'ALL' | RankTier>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'score_desc' | 'score_asc' | 'newest' | 'name'>('score_desc');
@@ -51,6 +52,47 @@ export const VisitorLeaderboardView: React.FC<VisitorLeaderboardViewProps> = ({
   // Selected Submission for Read-Only Modal
   const [viewingSubmission, setViewingSubmission] = useState<StudentSubmission | null>(null);
   const [modalMCFilter, setModalMCFilter] = useState<'all' | 'wrong' | 'correct'>('all');
+
+  // Available classes: ensuring full A1 to A5 for all grades
+  const visitorClassOptions = useMemo(() => {
+    const defaultSuffixes = ['A1', 'A2', 'A3', 'A4', 'A5'];
+    if (selectedGrade !== 'ALL') {
+      const standard = defaultSuffixes.map((s) => `${selectedGrade}${s}`);
+      const extra = Array.from(
+        new Set(
+          submissions
+            .filter((s) => s.grade === selectedGrade)
+            .map((s) => s.studentClass)
+            .filter((c) => Boolean(c) && !standard.includes(c))
+        )
+      );
+      return {
+        isGrouped: false,
+        grade: selectedGrade,
+        classes: [...standard, ...extra],
+      };
+    } else {
+      const groups = ([6, 7, 8, 9] as GradeLevel[]).map((g) => {
+        const standard = defaultSuffixes.map((s) => `${g}${s}`);
+        const extra = Array.from(
+          new Set(
+            submissions
+              .filter((s) => s.grade === g)
+              .map((s) => s.studentClass)
+              .filter((c) => Boolean(c) && !standard.includes(c))
+          )
+        );
+        return {
+          grade: g,
+          classes: [...standard, ...extra],
+        };
+      });
+      return {
+        isGrouped: true,
+        groups,
+      };
+    }
+  }, [selectedGrade, submissions]);
 
   // Compute enriched submissions with calculated score & rank tier
   const enrichedSubmissions = useMemo(() => {
@@ -88,6 +130,10 @@ export const VisitorLeaderboardView: React.FC<VisitorLeaderboardViewProps> = ({
       .filter((sub) => {
         // Grade filter
         if (selectedGrade !== 'ALL' && sub.grade !== selectedGrade) {
+          return false;
+        }
+        // Class filter
+        if (selectedClass !== 'ALL' && sub.studentClass !== selectedClass) {
           return false;
         }
         // Rank Tier filter
@@ -335,7 +381,12 @@ export const VisitorLeaderboardView: React.FC<VisitorLeaderboardViewProps> = ({
             {([6, 7, 8, 9] as GradeLevel[]).map((g) => (
               <button
                 key={g}
-                onClick={() => setSelectedGrade(g)}
+                onClick={() => {
+                  setSelectedGrade(g);
+                  if (selectedClass !== 'ALL' && !selectedClass.startsWith(`${g}`)) {
+                    setSelectedClass('ALL');
+                  }
+                }}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-cyber font-bold transition-all cursor-pointer whitespace-nowrap ${
                   selectedGrade === g
                     ? 'bg-cyan-400 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
@@ -348,10 +399,10 @@ export const VisitorLeaderboardView: React.FC<VisitorLeaderboardViewProps> = ({
           </div>
         </div>
 
-        {/* Row 2: Search, Tier Dropdown, Sorting */}
+        {/* Row 2: Search, Class Dropdown (A1 to A5), Tier Dropdown, Sorting */}
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-3 border-t border-slate-800/80">
           {/* Search Box */}
-          <div className="sm:col-span-5 relative">
+          <div className="sm:col-span-4 relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -370,42 +421,95 @@ export const VisitorLeaderboardView: React.FC<VisitorLeaderboardViewProps> = ({
             )}
           </div>
 
+          {/* Class Filter Dropdown (A1 to A5) */}
+          <div className="sm:col-span-3">
+            <select
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 focus:border-amber-400 text-slate-200 text-xs sm:text-sm outline-none transition-colors"
+            >
+              <option value="ALL" className="bg-slate-900 text-slate-100">
+                {selectedGrade === 'ALL'
+                  ? 'Tất cả các lớp (A1 → A5)'
+                  : `Tất cả lớp Khối ${selectedGrade} (A1 → A5)`}
+              </option>
+              {visitorClassOptions.isGrouped && visitorClassOptions.groups
+                ? visitorClassOptions.groups.map((grp) => (
+                    <optgroup
+                      key={grp.grade}
+                      label={`--- Khối ${grp.grade} ---`}
+                      className="bg-slate-900 text-cyan-400 font-bold"
+                    >
+                      {grp.classes.map((cls) => (
+                        <option
+                          key={cls}
+                          value={cls}
+                          className="bg-slate-900 text-slate-200 font-normal"
+                        >
+                          Lớp {cls}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))
+                : visitorClassOptions.classes?.map((cls) => (
+                    <option
+                      key={cls}
+                      value={cls}
+                      className="bg-slate-900 text-slate-200"
+                    >
+                      Lớp {cls}
+                    </option>
+                  ))}
+            </select>
+          </div>
+
           {/* Tier Filter Dropdown */}
-          <div className="sm:col-span-4">
+          <div className="sm:col-span-3">
             <select
               value={selectedTier}
               onChange={(e) => setSelectedTier(e.target.value as any)}
               className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 focus:border-amber-400 text-slate-200 text-xs sm:text-sm outline-none transition-colors"
             >
-              <option value="ALL">Tất cả các mốc danh hiệu ({enrichedSubmissions.length})</option>
-              <option value="nguyen_soai">👑 Nguyên soái (10 điểm tuyệt đối)</option>
-              <option value="tuong_quan">🎖️ Tướng quân (Từ 9 đến dưới 10 điểm)</option>
-              <option value="cao_thu">⚔️ Cao thủ (Từ 8 đến dưới 9 điểm)</option>
-              <option value="tan_thu">🛡️ Làng tân thủ (Dưới 8 điểm)</option>
+              <option value="ALL">Tất cả danh hiệu ({enrichedSubmissions.length})</option>
+              <option value="nguyen_soai">👑 Nguyên soái (10 điểm)</option>
+              <option value="tuong_quan">🎖️ Tướng quân (9 - 9.9 điểm)</option>
+              <option value="cao_thu">⚔️ Cao thủ (8 - 8.9 điểm)</option>
+              <option value="tan_thu">🛡️ Làng tân thủ (&lt; 8 điểm)</option>
             </select>
           </div>
 
           {/* Sort By Dropdown */}
-          <div className="sm:col-span-3">
+          <div className="sm:col-span-2">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
               className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 focus:border-amber-400 text-slate-200 text-xs sm:text-sm outline-none transition-colors font-mono"
             >
-              <option value="score_desc">Điểm cao nhất trước</option>
-              <option value="newest">Thời gian nộp mới nhất</option>
-              <option value="name">Tên học sinh A - Z</option>
-              <option value="score_asc">Điểm từ thấp đến cao</option>
+              <option value="score_desc">Điểm cao nhất</option>
+              <option value="newest">Mới nhất</option>
+              <option value="name">Tên A-Z</option>
+              <option value="score_asc">Điểm tăng dần</option>
             </select>
           </div>
         </div>
 
         {/* Results summary bar */}
-        <div className="flex items-center justify-between text-xs font-mono text-slate-400 pt-1">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between text-xs font-mono text-slate-400 pt-1 gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span>
               Tìm thấy: <strong className="text-amber-300 font-bold">{totalSubmissionsInFilter}</strong> bài thi
             </span>
+            {selectedClass !== 'ALL' && (
+              <span className="px-2 py-0.5 rounded bg-slate-800 text-cyan-300 text-[11px] font-cyber flex items-center gap-1">
+                Lớp: {selectedClass}
+                <button
+                  onClick={() => setSelectedClass('ALL')}
+                  className="hover:text-rose-400 ml-1"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
             {selectedTier !== 'ALL' && (
               <span className="px-2 py-0.5 rounded bg-slate-800 text-amber-300 text-[11px] font-cyber flex items-center gap-1">
                 Đang lọc: {RANK_TIER_CONFIG[selectedTier].badge}

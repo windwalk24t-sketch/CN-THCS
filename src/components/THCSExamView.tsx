@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { GradeLevel } from '../types/curriculum';
 import {
   ALL_GRADE_EXAMS,
@@ -382,6 +382,47 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
     link.click();
     document.body.removeChild(link);
   };
+
+  // Dynamic class options for teacher filter: always ensuring full A1 to A5 for all grades
+  const teacherClassOptions = useMemo(() => {
+    const defaultSuffixes = ['A1', 'A2', 'A3', 'A4', 'A5'];
+    if (filterGrade !== 'ALL') {
+      const standard = defaultSuffixes.map((s) => `${filterGrade}${s}`);
+      const extra = Array.from(
+        new Set(
+          submissions
+            .filter((s) => s.grade === filterGrade)
+            .map((s) => s.studentClass)
+            .filter((c) => Boolean(c) && !standard.includes(c))
+        )
+      );
+      return {
+        isGrouped: false,
+        grade: filterGrade,
+        classes: [...standard, ...extra],
+      };
+    } else {
+      const groups = ([6, 7, 8, 9] as GradeLevel[]).map((g) => {
+        const standard = defaultSuffixes.map((s) => `${g}${s}`);
+        const extra = Array.from(
+          new Set(
+            submissions
+              .filter((s) => s.grade === g)
+              .map((s) => s.studentClass)
+              .filter((c) => Boolean(c) && !standard.includes(c))
+          )
+        );
+        return {
+          grade: g,
+          classes: [...standard, ...extra],
+        };
+      });
+      return {
+        isGrouped: true,
+        groups,
+      };
+    }
+  }, [filterGrade, submissions]);
 
   // Filtered submissions for teacher
   const filteredSubmissions = submissions.filter((sub) => {
@@ -1554,41 +1595,72 @@ export const THCSExamView: React.FC<THCSExamViewProps> = ({
                       <span className="text-slate-400 font-cyber">Khối:</span>
                       <select
                         value={filterGrade}
-                        onChange={(e) =>
-                          setFilterGrade(
+                        onChange={(e) => {
+                          const val =
                             e.target.value === 'ALL'
                               ? 'ALL'
-                              : (parseInt(e.target.value) as GradeLevel)
-                          )
-                        }
+                              : (parseInt(e.target.value) as GradeLevel);
+                          setFilterGrade(val);
+                          // Auto reset class if the class doesn't belong to the newly selected grade
+                          if (
+                            filterClass !== 'ALL' &&
+                            val !== 'ALL' &&
+                            !filterClass.startsWith(`${val}`)
+                          ) {
+                            setFilterClass('ALL');
+                          }
+                        }}
                         className="bg-transparent text-slate-200 outline-none cursor-pointer"
                       >
-                        <option value="ALL">Tất cả các khối</option>
-                        <option value={6}>Khối 6</option>
-                        <option value={7}>Khối 7</option>
-                        <option value={8}>Khối 8</option>
-                        <option value={9}>Khối 9</option>
+                        <option value="ALL" className="bg-slate-900 text-slate-100">Tất cả các khối</option>
+                        <option value={6} className="bg-slate-900 text-slate-100">Khối 6</option>
+                        <option value={7} className="bg-slate-900 text-slate-100">Khối 7</option>
+                        <option value={8} className="bg-slate-900 text-slate-100">Khối 8</option>
+                        <option value={9} className="bg-slate-900 text-slate-100">Khối 9</option>
                       </select>
                     </div>
 
                     {/* Filter Class */}
                     <div className="flex items-center gap-1.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-700 text-xs">
                       <Filter className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-slate-400 font-cyber">Lớp:</span>
                       <select
                         value={filterClass}
                         onChange={(e) => setFilterClass(e.target.value)}
-                        className="bg-transparent text-slate-200 outline-none cursor-pointer"
+                        className="bg-transparent text-slate-200 outline-none cursor-pointer max-w-[170px] sm:max-w-none"
                       >
-                        <option value="ALL">Tất cả các lớp</option>
-                        <option value="8A1">Lớp 8A1</option>
-                        <option value="8A2">Lớp 8A2</option>
-                        <option value="8A3">Lớp 8A3</option>
-                        <option value="8A4">Lớp 8A4</option>
-                        <option value="9A1">Lớp 9A1</option>
-                        <option value="9A2">Lớp 9A2</option>
-                        <option value="9A3">Lớp 9A3</option>
-                        <option value="6A1">Lớp 6A1</option>
-                        <option value="7A1">Lớp 7A1</option>
+                        <option value="ALL" className="bg-slate-900 text-slate-100">
+                          {filterGrade === 'ALL'
+                            ? 'Tất cả các lớp (A1 → A5)'
+                            : `Tất cả lớp Khối ${filterGrade} (A1 → A5)`}
+                        </option>
+                        {teacherClassOptions.isGrouped && teacherClassOptions.groups
+                          ? teacherClassOptions.groups.map((grp) => (
+                              <optgroup
+                                key={grp.grade}
+                                label={`--- Khối ${grp.grade} ---`}
+                                className="bg-slate-900 text-cyan-400 font-bold"
+                              >
+                                {grp.classes.map((cls) => (
+                                  <option
+                                    key={cls}
+                                    value={cls}
+                                    className="bg-slate-900 text-slate-200 font-normal"
+                                  >
+                                    Lớp {cls}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            ))
+                          : teacherClassOptions.classes?.map((cls) => (
+                              <option
+                                key={cls}
+                                value={cls}
+                                className="bg-slate-900 text-slate-200"
+                              >
+                                Lớp {cls}
+                              </option>
+                            ))}
                       </select>
                     </div>
 
